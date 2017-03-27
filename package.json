@@ -1,0 +1,53 @@
+{
+  "name": "odux",
+  "version": "0.0.4",
+  "description": "observable redux",
+  "main": "index.js",
+  "scripts": {
+    "clean:dist": "rimraf -- dist",
+    "build": "rimraf -- dist && tsc",
+    "test": "rimraf -- dist/__tests__ && tsc && ava -v -s",
+    "coverage": "nyc npm test",
+    "coverage:report": "nyc report --reporter=lcov",
+    "coverage:upload": "cat ./coverage/lcov.info | coveralls",
+    "report": "npm run coverage && npm run coverage:report",
+    "reinstall": "rimraf -- node_modules && npm install",
+    "prepublish": "npm run build"
+  },
+  "ava": {
+    "files": [
+      "dist/__tests__/*.js"
+    ]
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "dist"
+  ],
+  "keywords": [
+    "react",
+    "redux",
+    "observable"
+  ],
+  "author": "zhang740",
+  "license": "MIT",
+  "dependencies": {
+    "power-di": "^1.0.7",
+    "react": "^15.4.2",
+    "redux": "^3.6.0",
+    "react-redux": "^5.0.3",
+    "@types/react-redux": "^4.4.38"
+  },
+  "devDependencies": {
+    "react": "^15.4.2",
+    "@types/react": "^15.0.16",
+    "@types/react-test-renderer": "^15.4.2",
+    "ava": "^0.18.2",
+    "rimraf": "^2.6.1",
+    "coveralls": "^2.13.0",
+    "nyc": "^10.2.0",
+    "react-test-renderer": "^15.5.4",
+    "tslint": "5.1.0",
+    "typescript": "2.2.2"
+  }
+}

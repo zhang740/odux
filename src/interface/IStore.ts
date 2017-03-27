@@ -1,0 +1,6 @@
+import { IStoreAdapter } from './IStoreAdapter'
+export declare interface IStore<DataType> {
+    readonly type: string
+    readonly Data: DataType
+    readonly Adapter: IStoreAdapter
+}
