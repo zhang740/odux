@@ -1,6 +1,6 @@
 {
   "name": "odux",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "observable redux",
   "main": "index.js",
   "scripts": {
