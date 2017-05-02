@@ -75,7 +75,11 @@ export class Odux implements IStoreAdapter {
     }
 
     public registerStore(store: IStore) {
-        this.storeKeys.push(store.type);
+        if (this.storeKeys.indexOf(store.type) >= 0) {
+            throw new Error(`already has the same store. ${store.type}`);
+        } else {
+            this.storeKeys.push(store.type);
+        }
     }
 
     public setPrefix(prefix: string): Odux {
@@ -130,23 +134,25 @@ export class Odux implements IStoreAdapter {
         this.trackingData.isTracking++;
     }
 
-    public transactionChange(func: () => void) {
+    public transactionChange(func: () => void, err?: (data: Error) => void) {
         this.transactionBegin();
         guard(func, undefined, (error) => {
             if (this.config.isDebug) {
                 this.console.warn('transactionChange error', error);
             }
+            err && err(error);
         });
         this.transactionEnd();
     }
 
-    public directWriteChange(func: () => void) {
+    public directWriteChange(func: () => void, err?: (data: Error) => void) {
         const oldWriteTrackingStatus = this.trackingData.isDirectWriting;
         this.trackingData.isDirectWriting = true;
         guard(func, undefined, (error) => {
             if (this.config.isDebug) {
                 this.console.warn('directWriteChange error', error);
             }
+            err && err(error);
         });
         this.trackingData.isDirectWriting = oldWriteTrackingStatus;
     }

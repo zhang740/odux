@@ -26,8 +26,8 @@ export declare class Odux implements IStoreAdapter {
     getDataByPath(path: string, store?: any): any;
     initTracker(): void;
     transactionBegin(): void;
-    transactionChange(func: () => void): void;
-    directWriteChange(func: () => void): void;
+    transactionChange(func: () => void, err?: (data: Error) => void): void;
+    directWriteChange(func: () => void, err?: (data: Error) => void): void;
     transactionEnd(): void;
     mainReducer(state: any, action: ActionType): any;
     private recoverData(data, value, key);

@@ -17,11 +17,11 @@ export abstract class IStoreAdapter {
     abstract transactionBegin(): void;
 
     /** 批量跟踪 */
-    abstract transactionChange(func: () => void): void;
+    abstract transactionChange(func: () => void, err?: (data: Error) => void): void;
 
     /** 结束跟踪事务 */
     abstract transactionEnd(): void;
 
     /** 直写变更 */
-    abstract directWriteChange(func: () => void): void;
+    abstract directWriteChange(func: () => void, err?: (data: Error) => void): void;
 }

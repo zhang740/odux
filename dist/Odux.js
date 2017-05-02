@@ -55,7 +55,12 @@ class Odux {
         return this.rootStore;
     }
     registerStore(store) {
-        this.storeKeys.push(store.type);
+        if (this.storeKeys.indexOf(store.type) >= 0) {
+            throw new Error(`already has the same store. ${store.type}`);
+        }
+        else {
+            this.storeKeys.push(store.type);
+        }
     }
     setPrefix(prefix) {
         this.config.prefix = prefix;
@@ -105,22 +110,24 @@ class Odux {
         this.initTracker();
         this.trackingData.isTracking++;
     }
-    transactionChange(func) {
+    transactionChange(func, err) {
         this.transactionBegin();
         utils_1.guard(func, undefined, (error) => {
             if (this.config.isDebug) {
                 this.console.warn('transactionChange error', error);
             }
+            err && err(error);
         });
         this.transactionEnd();
     }
-    directWriteChange(func) {
+    directWriteChange(func, err) {
         const oldWriteTrackingStatus = this.trackingData.isDirectWriting;
         this.trackingData.isDirectWriting = true;
         utils_1.guard(func, undefined, (error) => {
             if (this.config.isDebug) {
                 this.console.warn('directWriteChange error', error);
             }
+            err && err(error);
         });
         this.trackingData.isDirectWriting = oldWriteTrackingStatus;
     }

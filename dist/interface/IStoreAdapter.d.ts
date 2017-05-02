@@ -5,7 +5,7 @@ export declare abstract class IStoreAdapter {
     abstract getDataByPath(path: string): any;
     abstract initTracker(): void;
     abstract transactionBegin(): void;
-    abstract transactionChange(func: () => void): void;
+    abstract transactionChange(func: () => void, err?: (data: Error) => void): void;
     abstract transactionEnd(): void;
-    abstract directWriteChange(func: () => void): void;
+    abstract directWriteChange(func: () => void, err?: (data: Error) => void): void;
 }
