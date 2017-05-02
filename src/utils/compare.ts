@@ -3,22 +3,22 @@ export function compare(preObj: any, nxtObj: any, before: string) {
         for (let key in nxtObj) {
             try {
                 if (nxtObj.hasOwnProperty(key)) {
-                    let iseq = !!preObj && !!nxtObj && preObj[key] === nxtObj[key]
+                    let iseq = !!preObj && !!nxtObj && preObj[key] === nxtObj[key];
                     if (preObj[key] instanceof Function && nxtObj[key] instanceof Function) {
-                        iseq = undefined
+                        iseq = undefined;
                     }
-                    let str = before + '.' + key
+                    let str = before + '.' + key;
                     if (iseq) {
                         // this.console.log(str, iseq)
                     } else {
-                        this.console.info(str, iseq)
+                        this.console.info(str, iseq);
                     }
                 }
                 if (preObj instanceof Object || preObj instanceof Array) {
-                    this.compare(preObj[key], nxtObj[key], before + '.' + key)
+                    this.compare(preObj[key], nxtObj[key], before + '.' + key);
                 }
             } catch (error) {
-                this.console.info(before + '.' + key, 'err')
+                this.console.info(before + '.' + key, 'err');
             }
         }
     }

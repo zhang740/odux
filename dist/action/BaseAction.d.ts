@@ -1,7 +1,7 @@
-import { IStore } from '../interface';
+import { IStore, IStoreAdapter } from '../interface';
 export declare class BaseAction {
-    private storeManager;
-    protected addStore(store: IStore<any>): void;
+    static readonly GlobalAdapters: IStoreAdapter[];
+    private static globalAdapters;
     protected trackingBegin(stores?: IStore<any>[]): void;
     protected tracking(func: () => void, stores?: IStore<any>[], onErr?: (err: any) => void): void;
     protected trackingEnd(stores?: IStore<any>[]): void;

@@ -1,2 +1,2 @@
-export * from './IStoreAdapter'
-export * from './IStore'
+export * from './IStoreAdapter';
+export * from './IStore';

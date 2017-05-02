@@ -1,35 +1,27 @@
-import { IStore } from '../interface'
+import { IStore, IStoreAdapter } from '../interface';
 export class BaseAction {
-
-    private storeManager: IStore<any>[] = []
-
-    protected addStore(store: IStore<any>) {
-        store && this.storeManager.push(store)
-    }
+    public static get GlobalAdapters() { return this.globalAdapters; }
+    private static globalAdapters: IStoreAdapter[] = [];
 
     protected trackingBegin(stores?: IStore<any>[]) {
-        (stores || this.storeManager).forEach((store) => {
-            store.Adapter && store.Adapter.transactionBegin()
-        })
+        ((stores && stores.map(s => s.Adapter)) || BaseAction.GlobalAdapters).forEach((adapter) => {
+            adapter && adapter.transactionBegin();
+        });
     }
 
-    protected tracking(func: () => void, stores?: IStore<any>[], onErr?: (err: any) => void, ) {
-        (stores || this.storeManager).forEach((store) => {
-            store && store.Adapter && store.Adapter.transactionBegin()
-        })
+    protected tracking(func: () => void, stores?: IStore<any>[], onErr?: (err: any) => void) {
+        this.trackingBegin(stores);
         try {
-            func()
+            func();
         } catch (error) {
-            onErr && onErr(error)
+            onErr && onErr(error);
         }
-        (stores || this.storeManager).forEach((store) => {
-            store && store.Adapter && store.Adapter.transactionEnd()
-        })
+        this.trackingEnd(stores);
     }
 
     protected trackingEnd(stores?: IStore<any>[]) {
-        (stores || this.storeManager).forEach((store) => {
-            store && store.Adapter && store.Adapter.transactionEnd()
-        })
+        ((stores && stores.map(s => s.Adapter)) || BaseAction.GlobalAdapters).forEach((adapter) => {
+            adapter && adapter.transactionEnd();
+        });
     }
 }

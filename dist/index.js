@@ -8,5 +8,6 @@ __export(require("./action/BaseAction"));
 __export(require("./connect"));
 __export(require("./interface"));
 __export(require("./Provider"));
-__export(require("./ReduxStoreAdapter"));
+__export(require("./Odux"));
+__export(require("./event"));
 //# sourceMappingURL=index.js.map

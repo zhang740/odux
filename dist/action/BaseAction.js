@@ -1,36 +1,28 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 class BaseAction {
-    constructor() {
-        this.storeManager = [];
-    }
-    addStore(store) {
-        store && this.storeManager.push(store);
-    }
+    static get GlobalAdapters() { return this.globalAdapters; }
     trackingBegin(stores) {
-        (stores || this.storeManager).forEach((store) => {
-            store.Adapter && store.Adapter.transactionBegin();
+        ((stores && stores.map(s => s.Adapter)) || BaseAction.GlobalAdapters).forEach((adapter) => {
+            adapter && adapter.transactionBegin();
         });
     }
     tracking(func, stores, onErr) {
-        (stores || this.storeManager).forEach((store) => {
-            store && store.Adapter && store.Adapter.transactionBegin();
-        });
+        this.trackingBegin(stores);
         try {
             func();
         }
         catch (error) {
             onErr && onErr(error);
         }
-        (stores || this.storeManager).forEach((store) => {
-            store && store.Adapter && store.Adapter.transactionEnd();
-        });
+        this.trackingEnd(stores);
     }
     trackingEnd(stores) {
-        (stores || this.storeManager).forEach((store) => {
-            store && store.Adapter && store.Adapter.transactionEnd();
+        ((stores && stores.map(s => s.Adapter)) || BaseAction.GlobalAdapters).forEach((adapter) => {
+            adapter && adapter.transactionEnd();
         });
     }
 }
+BaseAction.globalAdapters = [];
 exports.BaseAction = BaseAction;
 //# sourceMappingURL=BaseAction.js.map

@@ -1,34 +1,28 @@
 import * as Redux from 'redux';
-import { SpyEvent } from './Spy';
+import { IocContext } from 'power-di';
 import { IStoreAdapter, IStore } from './interface';
+import { ChangeTrackData } from './TrackingData';
+import { OduxConfig } from './OduxConfig';
 export interface ActionType extends Redux.Action {
     data: ChangeTrackData[];
 }
-export interface ChangeTrackData extends SpyEvent {
-    _source?: string;
-}
-export declare class ReduxStoreAdapter implements IStoreAdapter {
-    private static defaultInstance;
-    private static REDUX_ACTION_TYPE;
-    private static exemptPrefix;
+export declare class Odux implements IStoreAdapter {
+    private config;
+    private static readonly REDUX_ACTION_TYPE;
+    private static readonly exemptPrefix;
     private rootStore;
-    private prefix;
+    private eventBus;
     private isInited;
     private dispatchTimer;
     private storeKeys;
-    private spy;
-    private isDebug;
-    private autoTracking;
     private trackingData;
-    constructor();
+    constructor(ioc?: IocContext, config?: OduxConfig);
     private readonly console;
-    static readonly DefaultInstance: ReduxStoreAdapter;
-    setRootStore(store: Redux.Store<any>): ReduxStoreAdapter;
+    setRootStore(store: Redux.Store<any>): Odux;
     getRootStore(): Redux.Store<any>;
-    registerStore(store: IStore<any>): void;
-    setPrefix(prefix: string): ReduxStoreAdapter;
-    setReduxActionType(type: string): ReduxStoreAdapter;
-    getStoreData<T>(storeName?: string, initial?: any): T;
+    registerStore(store: IStore): void;
+    setPrefix(prefix: string): Odux;
+    getStoreData<T = any>(storeName?: string, initial?: any): T;
     getDataByPath(path: string, store?: any): any;
     initTracker(): void;
     transactionBegin(): void;
@@ -40,10 +34,9 @@ export declare class ReduxStoreAdapter implements IStoreAdapter {
     private handleSpyEvent(event);
     private checkNewProps(data, path?);
     private createDataProxy(data, path?, deep?, cycleCheckStartId?);
-    private getCycleCheckId(data);
     private setProxyProperty(proxyObject, key, dataPath);
-    private genPropConfig(key);
     private dispatchChange(changes);
+    private dispatchAction();
     private isObject(data);
     private setMeta(data, meta?);
     private getMeta<T>(data);

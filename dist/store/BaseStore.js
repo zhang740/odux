@@ -3,13 +3,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const power_di_1 = require("power-di");
 const utils_1 = require("power-di/utils");
 const interface_1 = require("../interface");
-function storeRegister(iocContext = power_di_1.IocContext.DefaultInstance) {
+function registerStore(iocContext = power_di_1.IocContext.DefaultInstance) {
     return function (target) {
         const storeAdapter = iocContext.get(interface_1.IStoreAdapter);
         iocContext.register(new target(storeAdapter), target);
     };
 }
-exports.storeRegister = storeRegister;
+exports.registerStore = registerStore;
 exports.bindProperty = (bindKey, inital) => (target, key) => {
     const property = bindKey || key;
     Object.defineProperty(target, key, {

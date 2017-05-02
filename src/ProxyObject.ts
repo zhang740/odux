@@ -1,44 +1,48 @@
-import { Spy } from './Spy'
+import { EventBus, SpyEvent } from './event';
+import { TrackingData } from './TrackingData';
+import { OduxConfig } from './OduxConfig';
 
-export class ProxyObject<T> {
+export class ProxyObject<T = any> {
 
     constructor(
-        protected spy: Spy,
+        protected eventBus: EventBus,
+        protected config: OduxConfig,
+        protected trackingData: TrackingData,
         protected value: T,
         protected key: string,
         protected parentPath: string,
         protected fullPath: string,
     ) {
-        this.spy.spyReport({
+        this.eventBus.emit(new SpyEvent({
             type: 'Create',
             key,
             parentPath,
             fullPath,
             newValue: value,
-        })
+        }));
     }
 
     get() {
-        this.spy.spyReport({
+        this.eventBus.emit(new SpyEvent({
             type: 'Read',
             key: this.key,
             parentPath: this.parentPath,
             fullPath: this.fullPath,
             newValue: this.value,
-        })
-        return this.value
+        }));
+        return this.value;
     }
 
     set(newValue: T) {
-        const oldValue = this.value
-        this.value = newValue
-        this.spy.spyReport({
+        const oldValue = this.value;
+        this.value = newValue;
+        this.eventBus.emit(new SpyEvent({
             type: 'Update',
             key: this.key,
             parentPath: this.parentPath,
             fullPath: this.fullPath,
             newValue: newValue,
             oldValue: oldValue
-        })
+        }));
     }
 }

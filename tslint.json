@@ -34,7 +34,7 @@
         ],
         "semicolon": [
             true,
-            "never"
+            "always"
         ],
         "typedef-whitespace": [
             true,

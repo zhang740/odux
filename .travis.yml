@@ -1,0 +1,15 @@
+language: node_js
+os:
+- linux
+install:
+- npm install
+node_js:
+- 6.0.0
+- 6.9.2
+- 7.3.0
+script:
+- npm test
+after_success:
+- npm run coverage
+- npm run coverage:report
+- npm run coverage:upload

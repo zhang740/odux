@@ -1,88 +1,96 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const Spy_1 = require("./Spy");
-const ProxyObject_1 = require("./ProxyObject");
-const utils_1 = require("./utils");
-class TrackingData {
-    constructor() {
-        this.readTracking = {};
-        this.changeTracking = [];
-        this.changeDatas = [];
-        this.isTracking = 0;
-        this.isDirectWriting = false;
-        this.genId = 0;
-    }
-    genCycleId() { return this.genId++; }
+import * as Redux from 'redux';
+import { IocContext } from 'power-di';
+import { logger } from 'power-di/utils';
+import { EventBus } from './event';
+import { SpyEvent, SpyEventType } from './event';
+import { ProxyObject } from './ProxyObject';
+import { guard, commonForEach, compare, shallowCopy, getPath } from './utils';
+import { IStoreAdapter, IStore } from './interface';
+import { TrackingData, ChangeTrackData } from './TrackingData';
+import { OduxConfig } from './OduxConfig';
+
+export interface ActionType extends Redux.Action {
+    data: ChangeTrackData[];
 }
-class ReduxStoreAdapter {
-    constructor() {
-        this.isInited = false;
-        this.storeKeys = [];
-        this.spy = new Spy_1.Spy();
-        this.isDebug = true;
-        this.autoTracking = false;
-        this.trackingData = new TrackingData();
-        this.spy.addListener(this.handleSpyEvent.bind(this));
+
+interface MetadataType {
+    values: { [key: string]: ProxyObject };
+}
+interface MetaType {
+    __ODUX__: MetadataType;
+}
+
+export class Odux implements IStoreAdapter {
+    private static get REDUX_ACTION_TYPE() { return '$$Odux'; }
+    private static get exemptPrefix() { return '__ODUX__'; }
+
+    private rootStore: Redux.Store<any>;
+    private eventBus: EventBus;
+
+    private isInited = false;
+    private dispatchTimer: any;
+    private storeKeys: string[] = [];
+    private trackingData = new TrackingData();
+
+    constructor(
+        ioc = IocContext.DefaultInstance,
+        private config = new OduxConfig
+    ) {
+        this.eventBus = ioc.get<EventBus>(EventBus) || new EventBus();
+        this.eventBus.addEventListener(SpyEvent, (evt: SpyEvent) => {
+            this.handleSpyEvent(evt.message);
+        });
     }
-    get console() {
+
+    private get console() {
         const hasGroup = !!console.group;
         const thisConsole = {
-            log: (...msg) => { if (hasGroup)
-                console.log.apply(console, msg); },
-            info: (...msg) => { if (hasGroup)
-                console.info.apply(console, msg); },
+            log: (...msg: any[]) => { if (hasGroup) console.log.apply(console, msg); },
+            info: (...msg: any[]) => { if (hasGroup) console.info.apply(console, msg); },
             warn: console.warn,
             error: console.error,
-            group: (msg) => { if (console.group)
-                console.group(msg); },
-            groupCollapsed: (msg) => { if (console.groupCollapsed)
-                console.groupCollapsed(msg); },
-            groupEnd: () => { if (console.groupEnd)
-                console.groupEnd(); },
+            group: (msg: string) => { if (console.group) console.group(msg); },
+            groupCollapsed: (msg: string) => { if (console.groupCollapsed) console.groupCollapsed(msg); },
+            groupEnd: () => { if (console.groupEnd) console.groupEnd(); },
         };
         const noConsole = {
-            log: (...msg) => { },
-            info: (...msg) => { },
+            log: (...msg: any[]) => { },
+            info: (...msg: any[]) => { },
             warn: console.warn,
             error: console.error,
-            group: (msg) => { },
-            groupCollapsed: (msg) => { },
+            group: (msg: string) => { },
+            groupCollapsed: (msg: string) => { },
             groupEnd: () => { },
         };
-        return this.isDebug ? thisConsole : noConsole;
+        return this.config.isDebug ? thisConsole : noConsole;
     }
-    static get DefaultInstance() {
-        if (!this.defaultInstance) {
-            this.defaultInstance = new ReduxStoreAdapter();
-        }
-        return this.defaultInstance;
-    }
-    setRootStore(store) {
+
+    setRootStore(store: Redux.Store<any>): Odux {
         this.rootStore = store;
         return this;
     }
+
     getRootStore() {
         return this.rootStore;
     }
-    registerStore(store) {
+
+    public registerStore(store: IStore) {
         this.storeKeys.push(store.type);
     }
-    setPrefix(prefix) {
-        this.prefix = prefix;
+
+    public setPrefix(prefix: string): Odux {
+        this.config.prefix = prefix;
         return this;
     }
-    setReduxActionType(type) {
-        ReduxStoreAdapter.REDUX_ACTION_TYPE = type;
-        return this;
-    }
-    getStoreData(storeName, initial = {}) {
+
+    public getStoreData<T = any>(storeName?: string, initial: any = {}): T {
         const store = this.rootStore;
         if (!store) {
             throw new Error('Store not ready');
         }
         let state = store.getState();
-        if (this.prefix) {
-            this.prefix.split('.').forEach((name) => {
+        if (this.config.prefix) {
+            this.config.prefix.split('.').forEach((name) => {
                 this.directWriteChange(() => state = state[name] || {});
             });
         }
@@ -95,23 +103,25 @@ class ReduxStoreAdapter {
         }
         return state;
     }
-    getDataByPath(path, store = this.getStoreData()) {
+
+    public getDataByPath(path: string, store = this.getStoreData()): any {
         if (path) {
             path.split('.').forEach((name) => {
-                if (!store)
-                    return;
+                if (!store) return;
                 store = store[name];
             });
         }
         return store;
     }
-    initTracker() {
+
+    public initTracker() {
         if (!this.isInited) {
             this.createDataProxy(this.getStoreData());
             this.isInited = true;
         }
     }
-    transactionBegin() {
+
+    public transactionBegin() {
         if (this.trackingData.isTracking) {
             this.console.log('is Already in tracking.[Begin]');
         }
@@ -119,26 +129,30 @@ class ReduxStoreAdapter {
         this.initTracker();
         this.trackingData.isTracking++;
     }
-    transactionChange(func) {
+
+    public transactionChange(func: () => void) {
         this.transactionBegin();
-        utils_1.guard(func, undefined, (error) => {
-            if (this.isDebug) {
+        guard(func, undefined, (error) => {
+            if (this.config.isDebug) {
                 this.console.warn('transactionChange error', error);
             }
         });
         this.transactionEnd();
     }
-    directWriteChange(func) {
+
+    public directWriteChange(func: () => void) {
         const oldWriteTrackingStatus = this.trackingData.isDirectWriting;
         this.trackingData.isDirectWriting = true;
-        utils_1.guard(func, undefined, (error) => {
-            if (this.isDebug) {
+        guard(func, undefined, (error) => {
+            if (this.config.isDebug) {
                 this.console.warn('directWriteChange error', error);
             }
         });
         this.trackingData.isDirectWriting = oldWriteTrackingStatus;
     }
-    transactionEnd() {
+
+    /** 结束跟踪 */
+    public transactionEnd() {
         if (!this.trackingData.isTracking) {
             this.console.warn('is NOT in tracking.[End]');
             this.console.groupEnd();
@@ -153,6 +167,8 @@ class ReduxStoreAdapter {
         this.console.info('Tracking ending...');
         const storeData = this.getStoreData();
         this.createDataProxy(storeData, '', false);
+
+        // TODO 优化
         const readTrackingPaths = Object.keys(this.trackingData.readTracking);
         this.console.info('readTrackingPaths...', readTrackingPaths.length);
         readTrackingPaths.forEach((path) => {
@@ -162,8 +178,7 @@ class ReduxStoreAdapter {
             if (!data) {
                 const event = this.trackingData.readTracking[path].value;
                 this.trackingData.changeTracking.push(event);
-            }
-            else if (this.isObject(data)) {
+            } else if (this.isObject(data)) {
                 this.checkNewProps(data, path);
             }
         });
@@ -174,7 +189,8 @@ class ReduxStoreAdapter {
         }
         this.console.groupEnd();
     }
-    mainReducer(state, action) {
+
+    public mainReducer(state: any, action: ActionType) {
         if (!state) {
             state = {};
             this.storeKeys.forEach(key => {
@@ -182,16 +198,16 @@ class ReduxStoreAdapter {
             });
             this.createDataProxy(state);
         }
-        if (action.type !== ReduxStoreAdapter.REDUX_ACTION_TYPE) {
+        if (action.type !== Odux.REDUX_ACTION_TYPE) {
             return state;
         }
         if (!action.data || action.data.length < 1) {
             this.console.warn('No change data');
             return state;
         }
-        let newState = utils_1.shallowCopy(state);
+        let newState: any = shallowCopy(state);
         this.directWriteChange(() => {
-            if (this.isDebug) {
+            if (this.config.isDebug) {
                 this.console.groupCollapsed('mainReducer');
                 this.console.log('action:', action);
                 action.data.forEach(change => {
@@ -199,10 +215,12 @@ class ReduxStoreAdapter {
                 });
                 this.console.groupEnd();
             }
-            let copyNew = [];
-            let copyNewObject = {};
-            let data = newState;
-            let oldLastData;
+
+            let copyNew: string[] = [];
+            let copyNewObject: { [key: string]: any } = {};
+            let data: any = newState;
+            let oldLastData: any;
+            // TODO 待优化
             action.data.forEach((change) => {
                 let path = '';
                 change.parentPath && change.parentPath.split('.').forEach((name) => {
@@ -217,16 +235,18 @@ class ReduxStoreAdapter {
                         this.console.warn(`no object:key:${name} path:${path} change:`, change);
                         return;
                     }
-                    const fullPath = utils_1.getPath(path, name);
+
+                    const fullPath = getPath(path, name);
                     oldLastData = data[name];
                     if (copyNew.indexOf(fullPath) < 0) {
                         copyNew.push(fullPath);
                         this.console.info('shallow copy：', fullPath);
                         if (this.isObject(oldLastData)) {
-                            data[name] = utils_1.shallowCopy(oldLastData);
+                            // TODO 多路径同步更新
+                            data[name] = shallowCopy(oldLastData);
+
                             copyNewObject[fullPath] = data[name];
-                        }
-                        else {
+                        } else {
                             this.console.warn('shallow copy fail.', fullPath, change.parentPath, typeof oldLastData);
                             this.console.log(change);
                             data = {};
@@ -238,7 +258,6 @@ class ReduxStoreAdapter {
                 if (path === change.parentPath && data) {
                     switch (change.type) {
                         case 'New':
-                        case 'Create':
                         case 'Update':
                             if (oldLastData !== data && oldLastData[change.key] !== change.oldValue) {
                                 this.console.log('[restore oldValue]:', path, change.key);
@@ -251,51 +270,63 @@ class ReduxStoreAdapter {
                             this.createDataProxy(change.newValue, change.fullPath, true);
                             break;
                     }
+
                 }
                 data = newState;
             });
+
             this.console.log('new object createDataProxy...');
             copyNew.forEach(newPath => {
                 this.createDataProxy(copyNewObject[newPath], newPath, false);
             });
+
             this.createDataProxy(newState, '', false);
-            if (this.isDebug) {
-            }
+            // if (this.config.isDebug) {
+            // compare.call(this, state, newState, '')
+            // }
             this.console.info('[Return]newState');
         });
         return newState;
     }
-    recoverData(data, value, key) {
+
+    private recoverData(data: any, value: any, key: string) {
         Object.defineProperty(data, key, {
             enumerable: true,
             configurable: true,
             value: value
         });
     }
-    handleSpyEvent(event) {
-        const { isTracking, isDirectWriting, readTracking, changeTracking, } = this.trackingData;
+
+    private handleSpyEvent(event: SpyEventType) {
+        const {
+            isTracking,
+            isDirectWriting,
+            readTracking,
+            changeTracking,
+        } = this.trackingData;
+
         if (!isDirectWriting) {
             switch (event.type) {
                 case 'Update':
                     if (isTracking) {
                         this.console.log('Write Tracking(recording)：', event.fullPath);
-                        event._source = 'Update_recording_SpyEvent';
+                        (event as ChangeTrackData)._source = 'Update_recording_SpyEvent';
                         changeTracking.push(event);
                         Object.keys(readTracking)
                             .filter(path => path.startsWith(event.fullPath) && path !== event.fullPath)
                             .forEach(path => {
-                            delete readTracking[path];
-                        });
-                    }
-                    else {
+                                delete readTracking[path];
+                            });
+                    } else {
                         this.console.log('Write Tracking(dispatch)：', event.fullPath);
-                        event._source = 'Update_dispatch_SpyEvent';
+                        (event as ChangeTrackData)._source = 'Update_dispatch_SpyEvent';
                         this.dispatchChange([event]);
                     }
                     break;
+
                 case 'Read':
                     if (isTracking && this.isObject(event.newValue)) {
-                        event._source = 'Read_SpyEvent';
+                        (event as ChangeTrackData)._source = 'Read_SpyEvent';
                         readTracking[event.fullPath] = {
                             value: event
                         };
@@ -304,23 +335,23 @@ class ReduxStoreAdapter {
             }
         }
     }
-    checkNewProps(data, path = '') {
+
+    private checkNewProps(data: any, path: string = ''): boolean {
         this.console.groupCollapsed('checkNewProps... ' + path);
         let hasNewProps = false;
         if (this.isObject(data)) {
-            utils_1.commonForEach(data, (key) => {
-                const fullPath = utils_1.getPath(path, key);
+            commonForEach(data, (key: any) => {
+                const fullPath = getPath(path, key);
                 const meta = this.getMeta(data);
                 if (meta && !meta.values[key]) {
                     hasNewProps = true;
                     this.console.log('[new props]：', fullPath);
                     let change = this.trackingData.changeTracking
-                        .find((item) => item.fullPath === fullPath);
+                        .find((item: any) => item.fullPath === fullPath);
                     if (change) {
                         change.newValue = data[key];
                         change._source = 'checkNewProps';
-                    }
-                    else {
+                    } else {
                         change = {
                             key: key,
                             type: 'New',
@@ -331,6 +362,7 @@ class ReduxStoreAdapter {
                         };
                         this.trackingData.changeTracking.push(change);
                     }
+
                     this.createDataProxy(data[key], fullPath);
                     this.setProxyProperty(data, key, path);
                 }
@@ -339,119 +371,128 @@ class ReduxStoreAdapter {
         this.console.groupEnd();
         return hasNewProps;
     }
-    createDataProxy(data, path = '', deep = true, cycleCheckStartId = -1) {
+
+    private createDataProxy(data: any, path = '', deep = true, cycleCheckStartId = -1) {
         if (!this.isObject(data)) {
             return;
         }
-        if (cycleCheckStartId < 0) {
-            cycleCheckStartId = this.trackingData.genCycleId();
-        }
+
         this.console.groupCollapsed('createDataProxy，Deep：' + deep + ' ' + path);
-        utils_1.commonForEach(data, function (key) {
-            const fullPath = utils_1.getPath(path, key);
+
+        commonForEach(data, (key: any) => {
+            const fullPath = getPath(path, key);
             this.console.log(fullPath);
+
+            // TODO 检测循环引用
+
             this.setProxyProperty(data, key, path);
-            if (deep && this.isObject(data[key]) && key !== ReduxStoreAdapter.exemptPrefix) {
+
+            if (deep && this.isObject(data[key]) && key !== Odux.exemptPrefix) {
                 this.createDataProxy(data[key], fullPath, deep, cycleCheckStartId);
             }
-        }.bind(this));
+        });
         this.console.groupEnd();
     }
-    getCycleCheckId(data) {
-        if (!data.hasOwnProperty('__cycleCheckId')) {
-            Object.defineProperty(data, '__cycleCheckId', {
-                enumerable: false,
-                configurable: true,
-                writable: true,
-                value: this.trackingData.genCycleId()
-            });
-        }
-        return data['__cycleCheckId'];
-    }
-    setProxyProperty(proxyObject, key, dataPath) {
-        if (!this.isObject(proxyObject) || !key || key === ReduxStoreAdapter.exemptPrefix) {
+
+    private setProxyProperty(proxyObject: any, key: string, dataPath: string) {
+        if (!this.isObject(proxyObject) || !key || key === Odux.exemptPrefix) {
             return;
         }
+
         let meta = this.getMeta(proxyObject);
         if (!meta) {
             meta = this.setMeta(proxyObject);
         }
-        if (proxyObject[key] instanceof ProxyObject_1.ProxyObject) {
+        if (proxyObject[key] instanceof ProxyObject) {
             meta.values[key] = proxyObject[key];
-        }
-        else {
-            const fullPath = utils_1.getPath(dataPath, key);
+        } else {
+            const fullPath = getPath(dataPath, key);
             if (this.isObject(proxyObject[key])) {
                 this.setMeta(proxyObject[key]);
             }
-            meta.values[key] = new ProxyObject_1.ProxyObject(this.spy, proxyObject[key], key, dataPath, fullPath);
+            meta.values[key] = new ProxyObject(
+                this.eventBus,
+                this.config,
+                this.trackingData,
+                proxyObject[key],
+                key,
+                dataPath,
+                fullPath
+            );
         }
-        Object.defineProperty(proxyObject, key, this.genPropConfig(key));
-    }
-    genPropConfig(key) {
-        return {
+
+        const self = this;
+        Object.defineProperty(proxyObject, key, {
             configurable: true,
             enumerable: true,
             get: function () {
-                if (!this[ReduxStoreAdapter.exemptPrefix].values[key]) {
-                    this.console.warn('no value get', key, this[ReduxStoreAdapter.exemptPrefix].values);
+                const values = self.getMeta(this).values;
+                if (!values[key]) {
+                    this.console.warn('no value get', key, values);
                     return undefined;
                 }
-                return this[ReduxStoreAdapter.exemptPrefix].values[key].get();
+                return values[key].get();
             },
             set: function (value) {
-                if (!this[ReduxStoreAdapter.exemptPrefix].values[key]) {
-                    this.console.warn('no value set', key, this[ReduxStoreAdapter.exemptPrefix].values);
-                    return undefined;
+                const values = self.getMeta(this).values;
+                if (!values[key]) {
+                    this.console.warn('no value set', key, values);
+                    return;
                 }
-                return this[ReduxStoreAdapter.exemptPrefix].values[key].set(value);
+                values[key].set(value);
             }
-        };
+        });
     }
-    dispatchChange(changes) {
+
+    private dispatchChange(changes: ChangeTrackData[]) {
         if (this.dispatchTimer) {
             this.trackingData.changeDatas = this.trackingData.changeDatas.concat(changes);
             return;
-        }
-        else {
+        } else {
             this.trackingData.changeDatas = changes;
         }
-        this.dispatchTimer = setTimeout(() => {
-            this.dispatchTimer = undefined;
-            this.console.groupCollapsed('Changes Dispatching...' + this.trackingData.changeDatas.length);
-            const changes = this.trackingData.changeDatas;
-            this.trackingData.changeDatas = [];
-            this.rootStore.dispatch({
-                type: ReduxStoreAdapter.REDUX_ACTION_TYPE,
-                data: changes
-            });
-            this.console.groupEnd();
-        }, 0);
+        if (this.config.dispatchDelay === -1) {
+            this.dispatchAction();
+        } else {
+            this.dispatchTimer = setTimeout(() => {
+                this.dispatchTimer = undefined;
+                this.dispatchAction();
+            }, this.config.dispatchDelay);
+        }
     }
-    isObject(data) {
+
+    private dispatchAction() {
+        this.console.groupCollapsed('Changes Dispatching...' + this.trackingData.changeDatas.length);
+        this.rootStore.dispatch({
+            type: Odux.REDUX_ACTION_TYPE,
+            data: this.trackingData.changeDatas
+        } as ActionType);
+        this.trackingData.changeDatas = [];
+        this.console.groupEnd();
+    }
+
+    private isObject(data: any) {
         return data !== null && typeof data === 'object';
     }
-    setMeta(data, meta = { values: {} }) {
-        return utils_1.guard(() => {
-            if (data && this.isObject(data) && !data[ReduxStoreAdapter.exemptPrefix]) {
-                Object.defineProperty(data, ReduxStoreAdapter.exemptPrefix, {
+
+    private setMeta(data: any, meta: MetadataType = { values: {} }) {
+        return guard(() => {
+            if (data && this.isObject(data) && !data[Odux.exemptPrefix]) {
+                Object.defineProperty(data, Odux.exemptPrefix, {
                     enumerable: false,
                     writable: false,
                     configurable: true,
-                    value: meta || { values: {} }
+                    value: meta || { values: {} } as MetadataType
                 });
             }
-            return data && data[ReduxStoreAdapter.exemptPrefix];
+            return data && data[Odux.exemptPrefix];
         }, undefined, (err) => {
             this.console.warn('setMeta', err);
         });
     }
-    getMeta(data) {
-        const meta = !!data && data[ReduxStoreAdapter.exemptPrefix];
+
+    private getMeta<T>(data: any): MetadataType {
+        const meta = !!data && (data as any)[Odux.exemptPrefix];
         return meta;
     }
 }
-ReduxStoreAdapter.REDUX_ACTION_TYPE = '$$AutoRedux';
-ReduxStoreAdapter.exemptPrefix = '__ND__';
-exports.ReduxStoreAdapter = ReduxStoreAdapter;
-//# sourceMappingURL=ReduxStoreAdapter.js.map

@@ -1,16 +1,16 @@
 export function commonForEach(data: any, func: (key: string) => void) {
-    let target: any[] = []
-    const isArray = data instanceof Array
+    let target: any[] = [];
+    const isArray = data instanceof Array;
     if (isArray) {
-        target = data
+        target = data;
     } else if (data instanceof Object) {
-        target = Object.keys(data)
+        target = Object.keys(data);
     }
     for (let index = 0; index < target.length; index++) {
         if (isArray) {
-            func(index + '')
+            func(index + '');
         } else {
-            func(target[index])
+            func(target[index]);
         }
     }
 }

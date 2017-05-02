@@ -3,4 +3,5 @@ export * from './action/BaseAction';
 export * from './connect';
 export * from './interface';
 export * from './Provider';
-export * from './ReduxStoreAdapter';
+export * from './Odux';
+export * from './event';
