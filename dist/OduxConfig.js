@@ -4,7 +4,7 @@ class OduxConfig {
     constructor() {
         this.isDebug = false;
         this.dispatchDelay = 0;
-        this.transactionChange = false;
+        this.transaction = false;
         this.autoTracking = false;
     }
 }

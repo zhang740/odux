@@ -4,4 +4,5 @@ export declare class EventBus {
     addEventListener<T>(eventType: typeof BaseEvent, callback: <T extends BaseEvent>(event: T) => void): void;
     removeEventListener<T>(eventType: typeof BaseEvent, callback: <T extends BaseEvent>(event: T) => void): void;
     emit(event: BaseEvent): void;
+    private getEventType(evt);
 }

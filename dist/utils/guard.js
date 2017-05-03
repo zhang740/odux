@@ -5,8 +5,7 @@ function guard(func, defaultValue, onError) {
         return func();
     }
     catch (error) {
-        onError && onError(error);
-        return defaultValue;
+        return (onError && onError(error)) || defaultValue;
     }
 }
 exports.guard = guard;

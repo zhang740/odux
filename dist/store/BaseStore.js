@@ -6,6 +6,9 @@ const interface_1 = require("../interface");
 function registerStore(iocContext = power_di_1.IocContext.DefaultInstance) {
     return function (target) {
         const storeAdapter = iocContext.get(interface_1.IStoreAdapter);
+        if (!storeAdapter) {
+            throw new Error('register Adapter use IStoreAdapter first, please.');
+        }
         iocContext.register(new target(storeAdapter), target);
     };
 }
@@ -17,7 +20,7 @@ exports.bindProperty = (bindKey, inital) => (target, key) => {
             let result = this.Data[property];
             if (!result && inital !== undefined) {
                 this.Adapter.directWriteChange(() => {
-                    result = this.Data[property] = inital;
+                    result = this.Data[property] = inital();
                 });
             }
             return result;

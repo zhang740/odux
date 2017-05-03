@@ -9,5 +9,6 @@ __export(require("./connect"));
 __export(require("./interface"));
 __export(require("./Provider"));
 __export(require("./Odux"));
+__export(require("./OduxConfig"));
 __export(require("./event"));
 //# sourceMappingURL=index.js.map

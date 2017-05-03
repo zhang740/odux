@@ -5,18 +5,21 @@ import { IStore, IStoreAdapter } from '../interface';
 export function registerStore(iocContext = IocContext.DefaultInstance) {
     return function (target: any) {
         const storeAdapter = iocContext.get<IStoreAdapter>(IStoreAdapter);
+        if (!storeAdapter) {
+            throw new Error('register Adapter use IStoreAdapter first, please.');
+        }
         iocContext.register(new target(storeAdapter), target);
     };
 }
 
-export const bindProperty = (bindKey?: string, inital?: any) => (target: BaseStore, key: string) => {
+export const bindProperty = (bindKey?: string, inital?: () => any) => (target: BaseStore, key: string) => {
     const property = bindKey || key;
     Object.defineProperty(target, key, {
         get: function (this: BaseStore) {
             let result = this.Data[property];
             if (!result && inital !== undefined) {
                 this.Adapter.directWriteChange(() => {
-                    result = this.Data[property] = inital;
+                    result = this.Data[property] = inital();
                 });
             }
             return result;

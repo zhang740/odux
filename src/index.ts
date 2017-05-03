@@ -4,4 +4,5 @@ export * from './connect';
 export * from './interface';
 export * from './Provider';
 export * from './Odux';
+export * from './OduxConfig';
 export * from './event';
