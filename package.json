@@ -1,6 +1,6 @@
 {
   "name": "odux",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "observable redux",
   "main": "index.js",
   "scripts": {
@@ -31,8 +31,16 @@
     "redux",
     "observable"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhang740/odux.git"
+  },
   "author": "zhang740",
   "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/zhang740/odux/issues"
+  },
+  "homepage": "https://github.com/zhang740/odux#readme",
   "dependencies": {
     "power-di": "^1.0.7",
     "react": "^15.4.2",
