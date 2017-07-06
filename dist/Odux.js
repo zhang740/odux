@@ -7,8 +7,10 @@ const ProxyObject_1 = require("./ProxyObject");
 const utils_1 = require("./utils");
 const TrackingData_1 = require("./TrackingData");
 const OduxConfig_1 = require("./OduxConfig");
+const BaseStore_1 = require("./store/BaseStore");
 class Odux {
     constructor(ioc = power_di_1.IocContext.DefaultInstance, config = new OduxConfig_1.OduxConfig) {
+        this.ioc = ioc;
         this.config = config;
         this.isInited = false;
         this.storeKeys = [];
@@ -53,6 +55,13 @@ class Odux {
     }
     getRootStore() {
         return this.rootStore;
+    }
+    loadStores() {
+        const ioc = this.ioc;
+        const storeTypes = ioc.getSubClasses(BaseStore_1.BaseStore);
+        storeTypes.forEach(storeType => {
+            ioc.replace(storeType, new storeType(this));
+        });
     }
     registerStore(store) {
         if (this.storeKeys.indexOf(store.type) >= 0) {

@@ -1,6 +1,6 @@
 {
   "name": "odux",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "observable redux",
   "main": "index.js",
   "scripts": {
@@ -24,6 +24,8 @@
   "files": [
     "index.js",
     "index.d.ts",
+    "simple.js",
+    "simple.d.ts",
     "dist"
   ],
   "keywords": [
@@ -42,21 +44,21 @@
   },
   "homepage": "https://github.com/zhang740/odux#readme",
   "dependencies": {
-    "power-di": "^1.0.7",
-    "redux": "^3.6.0",
-    "react-redux": "^5.0.3",
-    "@types/react-redux": "^4.4.38"
+    "power-di": "^1.0.8",
+    "redux": "^3.7.1",
+    "react-redux": "^5.0.5",
+    "@types/react-redux": "^4.4.45"
   },
   "devDependencies": {
-    "react": "^15.4.2",
-    "@types/react": "^15.0.16",
-    "@types/react-test-renderer": "^15.4.2",
-    "ava": "^0.18.2",
+    "@types/react": "^15.0.34",
+    "@types/react-test-renderer": "^15.5.1",
+    "ava": "^0.20.0",
+    "coveralls": "^2.13.1",
+    "nyc": "^11.0.3",
+    "react": "^15.6.1",
+    "react-test-renderer": "^15.6.1",
     "rimraf": "^2.6.1",
-    "coveralls": "^2.13.0",
-    "nyc": "^10.2.0",
-    "react-test-renderer": "^15.5.4",
-    "tslint": "5.1.0",
-    "typescript": "2.3.2"
+    "tslint": "^5.4.3",
+    "typescript": "^2.4.1"
   }
 }

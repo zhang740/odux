@@ -8,6 +8,7 @@ import { guard, commonForEach, compare, shallowCopy, getPath } from './utils';
 import { IStoreAdapter, IStore } from './interface';
 import { TrackingData, ChangeTrackData } from './TrackingData';
 import { OduxConfig } from './OduxConfig';
+import { BaseStore } from './store/BaseStore';
 
 export interface ActionType extends Redux.Action {
     data: ChangeTrackData[];
@@ -33,7 +34,7 @@ export class Odux implements IStoreAdapter {
     private trackingData = new TrackingData();
 
     constructor(
-        ioc = IocContext.DefaultInstance,
+        private ioc = IocContext.DefaultInstance,
         private config = new OduxConfig
     ) {
         this.eventBus = ioc.get<EventBus>(EventBus) || new EventBus();
@@ -72,6 +73,14 @@ export class Odux implements IStoreAdapter {
 
     getRootStore() {
         return this.rootStore;
+    }
+
+    public loadStores() {
+        const ioc = this.ioc;
+        const storeTypes = ioc.getSubClasses<typeof BaseStore>(BaseStore);
+        storeTypes.forEach(storeType => {
+            ioc.replace(storeType, new storeType(this));
+        });
     }
 
     public registerStore(store: IStore) {

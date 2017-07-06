@@ -6,7 +6,12 @@ export class EventBus {
 
     private eventHandlers: { [key: string]: ((event: BaseEvent) => void)[] } = {};
 
-    public addEventListener<T>(eventType: typeof BaseEvent, callback: <T extends BaseEvent>(event: T) => void) {
+    /**
+     * addEventListener
+     * @param eventType typeof BaseEvent, break with ts@2.4.1
+     * @param callback event callback
+     */
+    public addEventListener<T>(eventType: any, callback: <T extends BaseEvent>(event: T) => void) {
         const type = this.getEventType(eventType);
         if (!this.eventHandlers[type]) {
             this.eventHandlers[type] = [];
@@ -14,7 +19,12 @@ export class EventBus {
         this.eventHandlers[type].push(callback);
     }
 
-    public removeEventListener<T>(eventType: typeof BaseEvent, callback: <T extends BaseEvent>(event: T) => void) {
+    /**
+     * removeEventListener
+     * @param eventType typeof BaseEvent, break with ts@2.4.1
+     * @param callback event callback
+     */
+    public removeEventListener<T>(eventType: any, callback: <T extends BaseEvent>(event: T) => void) {
         const type = this.getEventType(eventType);
         const element = this.eventHandlers[type];
         if (element) {
