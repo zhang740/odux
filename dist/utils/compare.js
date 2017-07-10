@@ -3,25 +3,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 function compare(preObj, nxtObj, before) {
     if (nxtObj instanceof Object || nxtObj instanceof Array) {
         for (let key in nxtObj) {
-            try {
-                if (nxtObj.hasOwnProperty(key)) {
-                    let iseq = !!preObj && !!nxtObj && preObj[key] === nxtObj[key];
-                    if (preObj[key] instanceof Function && nxtObj[key] instanceof Function) {
-                        iseq = undefined;
-                    }
-                    let str = before + '.' + key;
-                    if (iseq) {
-                    }
-                    else {
-                        this.console.info(str, iseq);
-                    }
+            if (nxtObj.hasOwnProperty(key)) {
+                let iseq = !!preObj && !!nxtObj && preObj[key] === nxtObj[key];
+                if (preObj[key] instanceof Function && nxtObj[key] instanceof Function) {
+                    iseq = false;
                 }
-                if (preObj instanceof Object || preObj instanceof Array) {
-                    this.compare(preObj[key], nxtObj[key], before + '.' + key);
+                let str = before + '.' + key;
+                if (iseq) {
+                }
+                else {
+                    console.info(str, iseq);
                 }
             }
-            catch (error) {
-                this.console.info(before + '.' + key, 'err');
+            if (preObj instanceof Object || preObj instanceof Array) {
+                compare(preObj[key], nxtObj[key], before + '.' + key);
             }
         }
     }

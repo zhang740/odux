@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const Odux_1 = require("../Odux");
+const Odux_1 = require("../core/Odux");
 const BaseAction_1 = require("../action/BaseAction");
 function createOdux(config) {
     const odux = new Odux_1.Odux(undefined, config);

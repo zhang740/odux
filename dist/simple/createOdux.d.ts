@@ -1,3 +1,3 @@
-import { Odux } from '../Odux';
-import { OduxConfig } from '../OduxConfig';
+import { Odux } from '../core/Odux';
+import { OduxConfig } from '../core/OduxConfig';
 export declare function createOdux(config?: OduxConfig): Odux;

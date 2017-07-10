@@ -1,5 +1,5 @@
-import { Odux } from '../Odux';
-import { OduxConfig } from '../OduxConfig';
+import { Odux } from '../core/Odux';
+import { OduxConfig } from '../core/OduxConfig';
 import { BaseAction } from '../action/BaseAction';
 
 export function createOdux(config?: OduxConfig) {

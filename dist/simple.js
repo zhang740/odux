@@ -5,4 +5,5 @@ function __export(m) {
 Object.defineProperty(exports, "__esModule", { value: true });
 __export(require("./simple/createOdux"));
 __export(require("./simple/decorators"));
+__export(require("./simple/getComponent"));
 //# sourceMappingURL=simple.js.map

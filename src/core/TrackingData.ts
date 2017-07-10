@@ -1,4 +1,4 @@
-import { SpyEventType } from './event';
+import { SpyEventType } from '../event';
 
 export interface ChangeTrackData extends SpyEventType {
     _source?: string;

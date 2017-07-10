@@ -1,5 +1,5 @@
 import test from 'ava';
-import { guard } from '../dist/utils';
+import { guard, compare } from '../dist/utils';
 
 test('guard', (t) => {
     const data = guard(() => {
@@ -15,4 +15,20 @@ test('guard', (t) => {
         return 2;
     });
     t.true(data2 === 2);
+});
+
+test('compare', (t) => {
+    compare(
+        {
+            a: {
+                b: {},
+                c: () => { }
+            },
+            d: () => { }
+        },
+        {
+            a: {},
+            d: () => { }
+        }, '');
+    t.pass();
 });

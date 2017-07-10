@@ -1,14 +1,14 @@
 import * as Redux from 'redux';
 import { IocContext } from 'power-di';
 import { logger } from 'power-di/utils';
-import { EventBus } from './event';
-import { SpyEvent, SpyEventType } from './event';
+import { EventBus } from '../event';
+import { SpyEvent, SpyEventType } from '../event';
 import { ProxyObject } from './ProxyObject';
-import { guard, commonForEach, compare, shallowCopy, getPath } from './utils';
-import { IStoreAdapter, IStore } from './interface';
+import { guard, commonForEach, compare, shallowCopy, getPath } from '../utils';
+import { IStoreAdapter, IStore } from '../interface';
 import { TrackingData, ChangeTrackData } from './TrackingData';
 import { OduxConfig } from './OduxConfig';
-import { BaseStore } from './store/BaseStore';
+import { BaseStore } from '../store/BaseStore';
 
 export interface ActionType extends Redux.Action {
     data: ChangeTrackData[];
