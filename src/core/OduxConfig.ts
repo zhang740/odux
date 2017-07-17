@@ -5,6 +5,5 @@ export class OduxConfig {
     dispatchDelay?= 0;
     /** TODO 是否使用事务提交。修改及时生效，或者仅在tracking中、dispatch后生效 */
     transaction?= false;
-    /** TODO */
-    autoTracking?= false;
+    autoTracking?= true;
 }

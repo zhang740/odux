@@ -14,6 +14,7 @@ export function registerStore(iocContext = IocContext.DefaultInstance) {
 
 export const bindProperty = (bindKey?: string, inital?: () => any) => (target: BaseStore, key: string) => {
     const property = bindKey || key;
+
     Object.defineProperty(target, key, {
         get: function (this: BaseStore) {
             let result = this.Data[property];

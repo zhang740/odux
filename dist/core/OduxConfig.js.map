@@ -1,1 +1,1 @@
-{"version":3,"file":"OduxConfig.js","sourceRoot":"","sources":["../../src/core/OduxConfig.ts"],"names":[],"mappings":";;AAAA;IAAA;QAEI,YAAO,GAAG,KAAK,CAAC;QAEhB,kBAAa,GAAG,CAAC,CAAC;QAElB,gBAAW,GAAG,KAAK,CAAC;QAEpB,iBAAY,GAAG,KAAK,CAAC;IACzB,CAAC;CAAA;AATD,gCASC"}
+{"version":3,"file":"OduxConfig.js","sourceRoot":"","sources":["../../src/core/OduxConfig.ts"],"names":[],"mappings":";;AAAA;IAAA;QAEI,YAAO,GAAG,KAAK,CAAC;QAEhB,kBAAa,GAAG,CAAC,CAAC;QAElB,gBAAW,GAAG,KAAK,CAAC;QACpB,iBAAY,GAAG,IAAI,CAAC;IACxB,CAAC;CAAA;AARD,gCAQC"}

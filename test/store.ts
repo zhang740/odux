@@ -19,10 +19,7 @@ class TestStore extends BaseStore<DataModel> {
 
 test('no store.', (t) => {
     const adapter = new Odux(undefined, { isDebug: true, dispatchDelay: -1 });
-    const finalCreateStore: any = compose(applyMiddleware(...[]))(createStore);
-    const rootReducer = adapter.mainReducer.bind(adapter);
-    const store = finalCreateStore(rootReducer);
-    t.throws(adapter.getStoreData);
+    t.throws(() => adapter.getStoreData());
 });
 
 const testStore = new TestStore(adapter);
@@ -48,6 +45,24 @@ test('base.', (t) => {
     t.true(testStore.Data.a_object !== oldData.a_object);
     t.true(testStore.Data.a_object.num !== oldData.a_object.num);
     t.true(testStore.a_object === testStore.Data.a_object);
+
+    testStore.Adapter.transactionChange(() => {
+        testStore.a_object.num = 5;
+        testStore.a_object.num = 9;
+    });
+    t.true(testStore.a_object.num === 9);
+});
+
+test('new props.', (t) => {
+    const oldData = testStore.Data;
+    t.true(!oldData.new_value);
+    testStore.Adapter.transactionChange(() => {
+        testStore.Data.new_value = {};
+    });
+    t.true(!!testStore.Data.new_value);
+    t.true(!oldData.new_value);
+    t.true(oldData !== testStore.Data);
+    t.true(oldData.new_value !== testStore.Data.new_value);
 });
 
 test('get store.', (t) => {
@@ -69,20 +84,6 @@ test('prefix.', (t) => {
     t.true(!testStore.Data.a_object);
     t.true(!testStore.a_object);
     adapter.setPrefix('');
-});
-
-test('new props.', (t) => {
-    initStore();
-
-    const oldData = testStore.Data;
-    t.true(!oldData.new_value);
-    testStore.Adapter.transactionChange(() => {
-        testStore.Data.new_value = {};
-    });
-    t.true(!!testStore.Data.new_value);
-    t.true(!oldData.new_value);
-    t.true(oldData !== testStore.Data);
-    t.true(oldData.new_value !== testStore.Data.new_value);
 });
 
 test('without tracking method.', (t) => {
@@ -124,4 +125,9 @@ test('registerStore.', (t) => {
     }
 
     t.true(context.get<Test2Store>(Test2Store) instanceof Test2Store);
+});
+
+test('getDataByPath.', (t) => {
+    const odux = testStore.Adapter as Odux;
+    t.true(odux.getRootStore().getState() === odux.getDataByPath(''));
 });

@@ -1,20 +1,22 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const power_di_1 = require("power-di");
+const utils_1 = require("power-di/utils");
 const event_1 = require("../event");
 const event_2 = require("../event");
 const ProxyObject_1 = require("./ProxyObject");
-const utils_1 = require("../utils");
+const utils_2 = require("../utils");
 const TrackingData_1 = require("./TrackingData");
 const OduxConfig_1 = require("./OduxConfig");
 const BaseStore_1 = require("../store/BaseStore");
 class Odux {
-    constructor(ioc = power_di_1.IocContext.DefaultInstance, config = new OduxConfig_1.OduxConfig) {
+    constructor(ioc = power_di_1.IocContext.DefaultInstance, config) {
         this.ioc = ioc;
         this.config = config;
         this.isInited = false;
         this.storeKeys = [];
         this.trackingData = new TrackingData_1.TrackingData();
+        this.config = Object.assign(new OduxConfig_1.OduxConfig, this.config || {});
         this.eventBus = ioc.get(event_1.EventBus) || new event_1.EventBus();
         this.eventBus.addEventListener(event_2.SpyEvent, (evt) => {
             this.handleSpyEvent(evt.message);
@@ -56,11 +58,15 @@ class Odux {
     getRootStore() {
         return this.rootStore;
     }
-    loadStores() {
+    initStores(StoreTypes) {
         const ioc = this.ioc;
-        const storeTypes = ioc.getSubClasses(BaseStore_1.BaseStore);
-        storeTypes.forEach(storeType => {
-            ioc.replace(storeType, new storeType(this));
+        if (!StoreTypes) {
+            StoreTypes = ioc.getSubClasses(BaseStore_1.BaseStore);
+        }
+        StoreTypes && StoreTypes.forEach((st) => {
+            if (utils_1.isClass(st)) {
+                ioc.replace(st, new st(this));
+            }
         });
     }
     registerStore(store) {
@@ -96,13 +102,11 @@ class Odux {
         return state;
     }
     getDataByPath(path, store = this.getStoreData()) {
-        if (path) {
-            path.split('.').forEach((name) => {
-                if (!store)
-                    return;
-                store = store[name];
-            });
-        }
+        path.split('.').forEach((name) => {
+            if (!store || !name)
+                return;
+            store = store[name];
+        });
         return store;
     }
     initTracker() {
@@ -121,7 +125,7 @@ class Odux {
     }
     transactionChange(func, err) {
         this.transactionBegin();
-        utils_1.guard(func, undefined, (error) => {
+        utils_2.guard(func, undefined, (error) => {
             if (this.config.isDebug) {
                 this.console.warn('transactionChange error', error);
             }
@@ -132,7 +136,7 @@ class Odux {
     directWriteChange(func, err) {
         const oldWriteTrackingStatus = this.trackingData.isDirectWriting;
         this.trackingData.isDirectWriting = true;
-        utils_1.guard(func, undefined, (error) => {
+        utils_2.guard(func, undefined, (error) => {
             if (this.config.isDebug) {
                 this.console.warn('directWriteChange error', error);
             }
@@ -191,7 +195,7 @@ class Odux {
             this.console.warn('No change data');
             return state;
         }
-        let newState = utils_1.shallowCopy(state);
+        let newState = utils_2.shallowCopy(state);
         this.directWriteChange(() => {
             if (this.config.isDebug) {
                 this.console.groupCollapsed('mainReducer');
@@ -219,13 +223,13 @@ class Odux {
                         this.console.warn(`no object:key:${name} path:${path} change:`, change);
                         return;
                     }
-                    const fullPath = utils_1.getPath(path, name);
+                    const fullPath = utils_2.getPath(path, name);
                     oldLastData = data[name];
                     if (copyNew.indexOf(fullPath) < 0) {
                         copyNew.push(fullPath);
                         this.console.info('shallow copy：', fullPath);
                         if (this.isObject(oldLastData)) {
-                            data[name] = utils_1.shallowCopy(oldLastData);
+                            data[name] = utils_2.shallowCopy(oldLastData);
                             copyNewObject[fullPath] = data[name];
                         }
                         else {
@@ -287,6 +291,9 @@ class Odux {
                         });
                     }
                     else {
+                        if (!this.config.autoTracking) {
+                            throw new Error('CANNOT modify data without tracking when autoTracking is FALSE.');
+                        }
                         this.console.log('Write Tracking(dispatch)：', event.fullPath);
                         event._source = 'Update_dispatch_SpyEvent';
                         this.dispatchChange([event]);
@@ -307,8 +314,8 @@ class Odux {
         this.console.groupCollapsed('checkNewProps... ' + path);
         let hasNewProps = false;
         if (this.isObject(data)) {
-            utils_1.commonForEach(data, (key) => {
-                const fullPath = utils_1.getPath(path, key);
+            utils_2.commonForEach(data, (key) => {
+                const fullPath = utils_2.getPath(path, key);
                 const meta = this.getMeta(data);
                 if (meta && !meta.values[key]) {
                     hasNewProps = true;
@@ -343,8 +350,8 @@ class Odux {
             return;
         }
         this.console.groupCollapsed('createDataProxy，Deep：' + deep + ' ' + path);
-        utils_1.commonForEach(data, (key) => {
-            const fullPath = utils_1.getPath(path, key);
+        utils_2.commonForEach(data, (key) => {
+            const fullPath = utils_2.getPath(path, key);
             this.console.log(fullPath);
             this.setProxyProperty(data, key, path);
             if (deep && this.isObject(data[key]) && key !== Odux.exemptPrefix) {
@@ -365,7 +372,7 @@ class Odux {
             meta.values[key] = proxyObject[key];
         }
         else {
-            const fullPath = utils_1.getPath(dataPath, key);
+            const fullPath = utils_2.getPath(dataPath, key);
             if (this.isObject(proxyObject[key])) {
                 this.setMeta(proxyObject[key]);
             }
@@ -424,19 +431,15 @@ class Odux {
         return data !== null && typeof data === 'object';
     }
     setMeta(data, meta = { values: {} }) {
-        return utils_1.guard(() => {
-            if (data && this.isObject(data) && !data[Odux.exemptPrefix]) {
-                Object.defineProperty(data, Odux.exemptPrefix, {
-                    enumerable: false,
-                    writable: false,
-                    configurable: true,
-                    value: meta || { values: {} }
-                });
-            }
-            return data && data[Odux.exemptPrefix];
-        }, undefined, (err) => {
-            this.console.warn('setMeta', err);
-        });
+        if (data && this.isObject(data) && !data[Odux.exemptPrefix]) {
+            Object.defineProperty(data, Odux.exemptPrefix, {
+                enumerable: false,
+                writable: false,
+                configurable: true,
+                value: meta || { values: {} }
+            });
+        }
+        return data && data[Odux.exemptPrefix];
     }
     getMeta(data) {
         const meta = !!data && data[Odux.exemptPrefix];

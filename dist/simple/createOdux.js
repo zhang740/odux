@@ -8,4 +8,13 @@ function createOdux(config) {
     return odux;
 }
 exports.createOdux = createOdux;
+const redux_1 = require("redux");
+function createOduxAIO(config, middlewares = []) {
+    const finalCreateStore = redux_1.compose(redux_1.applyMiddleware(...middlewares), this.window && this.window.devToolsExtension && config.isDebug ?
+        window.devToolsExtension() : (f) => f)(redux_1.createStore);
+    const odux = createOdux(config);
+    odux.setRootStore(finalCreateStore(odux.mainReducer.bind(odux)));
+    return odux;
+}
+exports.createOduxAIO = createOduxAIO;
 //# sourceMappingURL=createOdux.js.map

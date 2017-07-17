@@ -1,6 +1,6 @@
 import * as Redux from 'redux';
 import { IocContext } from 'power-di';
-import { logger } from 'power-di/utils';
+import { logger, isClass } from 'power-di/utils';
 import { EventBus } from '../event';
 import { SpyEvent, SpyEventType } from '../event';
 import { ProxyObject } from './ProxyObject';
@@ -35,8 +35,10 @@ export class Odux implements IStoreAdapter {
 
     constructor(
         private ioc = IocContext.DefaultInstance,
-        private config = new OduxConfig
+        private config?: OduxConfig
     ) {
+        this.config = Object.assign(new OduxConfig, this.config || {});
+
         this.eventBus = ioc.get<EventBus>(EventBus) || new EventBus();
         this.eventBus.addEventListener(SpyEvent, (evt: SpyEvent) => {
             this.handleSpyEvent(evt.message);
@@ -75,11 +77,19 @@ export class Odux implements IStoreAdapter {
         return this.rootStore;
     }
 
-    public loadStores() {
+    /**
+     * init stores
+     * @param StoreTypes typeof BaseStore[]
+     */
+    public initStores(StoreTypes?: any[]) {
         const ioc = this.ioc;
-        const storeTypes = ioc.getSubClasses<typeof BaseStore>(BaseStore);
-        storeTypes.forEach(storeType => {
-            ioc.replace(storeType, new storeType(this));
+        if (!StoreTypes) {
+            StoreTypes = ioc.getSubClasses<typeof BaseStore>(BaseStore);
+        }
+        StoreTypes && StoreTypes.forEach((st: typeof BaseStore) => {
+            if (isClass(st)) {
+                ioc.replace(st, new st(this));
+            }
         });
     }
 
@@ -118,12 +128,10 @@ export class Odux implements IStoreAdapter {
     }
 
     public getDataByPath(path: string, store = this.getStoreData()): any {
-        if (path) {
-            path.split('.').forEach((name) => {
-                if (!store) return;
-                store = store[name];
-            });
-        }
+        path.split('.').forEach((name) => {
+            if (!store || !name) return;
+            store = store[name];
+        });
         return store;
     }
 
@@ -333,6 +341,9 @@ export class Odux implements IStoreAdapter {
                                 delete readTracking[path];
                             });
                     } else {
+                        if (!this.config.autoTracking) {
+                            throw new Error('CANNOT modify data without tracking when autoTracking is FALSE.');
+                        }
                         this.console.log('Write Tracking(dispatch)：', event.fullPath);
                         (event as ChangeTrackData)._source = 'Update_dispatch_SpyEvent';
                         this.dispatchChange([event]);
@@ -491,19 +502,15 @@ export class Odux implements IStoreAdapter {
     }
 
     private setMeta(data: any, meta: MetadataType = { values: {} }) {
-        return guard(() => {
-            if (data && this.isObject(data) && !data[Odux.exemptPrefix]) {
-                Object.defineProperty(data, Odux.exemptPrefix, {
-                    enumerable: false,
-                    writable: false,
-                    configurable: true,
-                    value: meta || { values: {} } as MetadataType
-                });
-            }
-            return data && data[Odux.exemptPrefix];
-        }, undefined, (err) => {
-            this.console.warn('setMeta', err);
-        });
+        if (data && this.isObject(data) && !data[Odux.exemptPrefix]) {
+            Object.defineProperty(data, Odux.exemptPrefix, {
+                enumerable: false,
+                writable: false,
+                configurable: true,
+                value: meta || { values: {} } as MetadataType
+            });
+        }
+        return data && data[Odux.exemptPrefix];
     }
 
     private getMeta<T>(data: any): MetadataType {

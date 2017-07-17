@@ -21,7 +21,7 @@ export declare class Odux implements IStoreAdapter {
     private readonly console;
     setRootStore(store: Redux.Store<any>): Odux;
     getRootStore(): Redux.Store<any>;
-    loadStores(): void;
+    initStores(StoreTypes?: any[]): void;
     registerStore(store: IStore): void;
     setPrefix(prefix: string): Odux;
     getStoreData<T = any>(storeName?: string, initial?: any): T;

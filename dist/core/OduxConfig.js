@@ -5,7 +5,7 @@ class OduxConfig {
         this.isDebug = false;
         this.dispatchDelay = 0;
         this.transaction = false;
-        this.autoTracking = false;
+        this.autoTracking = true;
     }
 }
 exports.OduxConfig = OduxConfig;
