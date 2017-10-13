@@ -14,7 +14,9 @@
         "preserveConstEnums": true,
         "suppressImplicitAnyIndexErrors": true,
         "rootDir": "src",
-        "outDir": "dist",
+        "outDir": "lib",
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
         "sourceMap": true
     },
     "include": [
@@ -23,6 +25,6 @@
     ],
     "exclude": [
         "node_modules",
-        "dist"
+        "lib"
     ]
 }

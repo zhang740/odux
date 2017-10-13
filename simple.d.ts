@@ -1,1 +1,1 @@
-export * from './dist/simple'
+export * from './lib/simple'

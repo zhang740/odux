@@ -19,7 +19,7 @@ export function createOduxAIO(config?: OduxConfig, middlewares: any[] = []) {
 
     const odux = createOdux(config);
 
-    odux.setRootStore(finalCreateStore(odux.mainReducer.bind(odux)));
+    odux.setReduxStore(finalCreateStore(odux.mainReducer.bind(odux)));
 
     return odux;
 }
