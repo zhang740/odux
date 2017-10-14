@@ -37,7 +37,10 @@ export class Odux implements IStoreAdapter {
     private ioc = IocContext.DefaultInstance,
     private config?: OduxConfig
   ) {
-    this.config = Object.assign(new OduxConfig, this.config || {});
+    this.config = {
+      ...new OduxConfig(),
+      ...(this.config || {}),
+    };
 
     this.eventBus = ioc.get<EventBus>(EventBus) || new EventBus();
     this.eventBus.addEventListener(SpyEvent, (evt: SpyEvent) => {

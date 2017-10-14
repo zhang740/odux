@@ -3,23 +3,28 @@ import { OduxConfig } from '../core/OduxConfig';
 import { BaseAction } from '../action/BaseAction';
 
 export function createOdux(config?: OduxConfig) {
-    const odux = new Odux(undefined, config);
-    BaseAction.GlobalAdapters.push(odux);
-    return odux;
+  const odux = new Odux(undefined, config);
+  BaseAction.GlobalAdapters.push(odux);
+  return odux;
 }
 
 import { createStore, applyMiddleware, compose, Store } from 'redux';
-export function createOduxAIO(config?: OduxConfig, middlewares: any[] = []) {
+export function createOduxAIO(config: OduxConfig = {}, middlewares: any[] = []) {
+  const odux = createOdux(config);
 
-    const finalCreateStore: any = (compose as any)(
-        applyMiddleware(...middlewares),
-        this.window && (this.window as any).devToolsExtension && config.isDebug ?
-            (window as any).devToolsExtension() : (f: any) => f
-    )(createStore);
+  const composeEnhancers =
+    config.isDebug &&
+      typeof window === 'object' &&
+      (window as any).__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ ?
+      (window as any).__REDUX_DEVTOOLS_EXTENSION_COMPOSE__({
+      }) : compose;
 
-    const odux = createOdux(config);
+  const enhancer = composeEnhancers(
+    applyMiddleware(...middlewares),
+  );
+  const store = createStore(odux.mainReducer.bind(odux), enhancer);
 
-    odux.setReduxStore(finalCreateStore(odux.mainReducer.bind(odux)));
+  odux.setReduxStore(store);
 
-    return odux;
+  return odux;
 }

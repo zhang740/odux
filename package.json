@@ -1,6 +1,6 @@
 {
   "name": "odux",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "observable redux",
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
@@ -46,10 +46,10 @@
   },
   "homepage": "https://github.com/zhang740/odux#readme",
   "dependencies": {
-    "power-di": "^1.0.8",
+    "power-di": "^1.1.1",
     "redux": "^3.7.1",
-    "react-redux": "^5.0.5",
-    "@types/react-redux": "^4.4.45"
+    "react-redux": "^5.0.6",
+    "@types/react-redux": "^5.0.10"
   },
   "devDependencies": {
     "@types/react": "^15.6.0",
