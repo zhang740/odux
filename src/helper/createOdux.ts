@@ -1,15 +1,27 @@
+import { IocContext } from 'power-di';
 import { Odux } from '../core/Odux';
 import { OduxConfig } from '../core/OduxConfig';
 import { BaseAction } from '../action/BaseAction';
+import { IStoreAdapter } from '../interface';
 
 export function createOdux(config?: OduxConfig) {
-  const odux = new Odux(undefined, config);
+  config = {
+    ...new OduxConfig,
+    ...(config || {}),
+  };
+  const odux = new Odux(config);
   BaseAction.GlobalAdapters.push(odux);
+  config.iocContext.register(odux, IStoreAdapter);
+  odux.initStores();
   return odux;
 }
 
 import { createStore, applyMiddleware, compose, Store } from 'redux';
-export function createOduxAIO(config: OduxConfig = {}, middlewares: any[] = []) {
+export function createOduxAIO(config?: OduxConfig, middlewares: any[] = []) {
+  config = {
+    ...new OduxConfig,
+    ...(config || {}),
+  };
   const odux = createOdux(config);
 
   const composeEnhancers =

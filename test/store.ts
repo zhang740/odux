@@ -1,8 +1,9 @@
 import test from 'ava';
 import { createStore, applyMiddleware, compose, Store } from 'redux';
-import { BaseStore, bindProperty, Odux, IStoreAdapter, registerStore } from '../lib';
+import { BaseStore, decorators, Odux, IStoreAdapter } from '../lib';
 import { adapter, store } from './data/data';
 import { IocContext } from 'power-di';
+const { bindProperty, registerStore } = decorators;
 
 interface TestObject {
   num?: number;
@@ -18,7 +19,7 @@ class TestStore extends BaseStore<DataModel> {
 }
 
 test('no store.', (t) => {
-  const adapter = new Odux(undefined, { isDebug: true, dispatchDelay: -1 });
+  const adapter = new Odux({ isDebug: true, dispatchDelay: -1 });
   t.throws(() => adapter.getStoreData());
 });
 

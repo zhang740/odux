@@ -5,7 +5,6 @@ module.exports = {
   entry: {
     app: [
       path.resolve(__dirname, 'lib/index.js'),
-      path.resolve(__dirname, 'lib/simple.js'),
     ],
     power: ['power-di']
   },

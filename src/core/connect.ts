@@ -1,10 +1,13 @@
-import { connect as nativeConnect } from 'react-redux';
-import { IocContext } from 'power-di';
+import {
+  connect as nativeConnect,
+  InferableComponentEnhancerWithProps,
+  DispatchProp,
+} from 'react-redux';
 
-export type MapStateToProps<T> = (ownProps?: T) => T;
+export type MapStateToProps<T, P> = (ownProps?: T) => P;
 
-export function connect<T>(mapper: MapStateToProps<T>) {
-    return nativeConnect(
-        (state: any, props: T) => mapper(props),
-    ) as any;
+export function connect<T>(mapper: MapStateToProps<T, any>) {
+  return nativeConnect(
+    (state: any, props: T) => mapper(props),
+  );
 }

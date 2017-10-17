@@ -25,6 +25,7 @@ export class Odux implements IStoreAdapter {
   private static get REDUX_ACTION_TYPE() { return '$$Odux'; }
   private static get exemptPrefix() { return '__ODUX__'; }
 
+  private get ioc() { return this.config.iocContext; }
   private reduxStore: Redux.Store<any>;
   private eventBus: EventBus;
 
@@ -34,7 +35,6 @@ export class Odux implements IStoreAdapter {
   private trackingData = new TrackingData();
 
   constructor(
-    private ioc = IocContext.DefaultInstance,
     private config?: OduxConfig
   ) {
     this.config = {
@@ -42,7 +42,7 @@ export class Odux implements IStoreAdapter {
       ...(this.config || {}),
     };
 
-    this.eventBus = ioc.get<EventBus>(EventBus) || new EventBus();
+    this.eventBus = this.ioc.get<EventBus>(EventBus) || new EventBus();
     this.eventBus.addEventListener(SpyEvent, (evt: SpyEvent) => {
       this.handleSpyEvent(evt.message);
     });
@@ -84,21 +84,21 @@ export class Odux implements IStoreAdapter {
    * init stores
    * @param StoreTypes typeof BaseStore[]
    */
-  public initStores(StoreTypes?: any[]) {
+  public initStores(StoreTypes?: any[], ignoreDuplicate = false) {
     const ioc = this.ioc;
     if (!StoreTypes) {
       StoreTypes = ioc.getSubClasses<typeof BaseStore>(BaseStore);
     }
-    StoreTypes && StoreTypes.forEach((st: typeof BaseStore) => {
-      if (isClass(st)) {
-        ioc.replace(st, new st(this));
+    StoreTypes && StoreTypes.forEach((StoreType: typeof BaseStore) => {
+      if (isClass(StoreType)) {
+        ioc.replace(StoreType, new StoreType(this));
       }
     });
   }
 
-  public registerStore(store: IStore) {
+  public registerStore(store: IStore, ignoreDuplicate = false) {
     if (this.storeKeys.indexOf(store.type) >= 0) {
-      throw new Error(`already has the same store. ${store.type}`);
+      if (!ignoreDuplicate) throw new Error(`already has the same store. ${store.type}`);
     } else {
       this.storeKeys.push(store.type);
     }
@@ -174,6 +174,7 @@ export class Odux implements IStoreAdapter {
       }
       err && err(error);
     });
+    this.checkNewProps();
     this.trackingData.isDirectWriting = oldWriteTrackingStatus;
   }
 
@@ -195,19 +196,7 @@ export class Odux implements IStoreAdapter {
     this.createDataProxy(storeData, '', false);
 
     // TODO 优化
-    const readTrackingPaths = Object.keys(this.trackingData.readTracking);
-    this.console.info('readTrackingPaths...', readTrackingPaths.length);
-    readTrackingPaths.forEach((path) => {
-      let data = this.getDataByPath(path, storeData);
-      this.console.log('[check]:', path, !!data);
-      if (!data) {
-        const event = this.trackingData.readTracking[path].value;
-        this.trackingData.changeTracking.push(event);
-      } else if (this.isObject(data)) {
-        this.checkNewProps(data, path);
-      }
-    });
-    this.trackingData.readTracking = {};
+    this.checkNewProps(storeData);
     if (this.trackingData.changeTracking.length > 0) {
       this.dispatchChange(this.trackingData.changeTracking);
       this.trackingData.changeTracking = [];
@@ -324,80 +313,90 @@ export class Odux implements IStoreAdapter {
 
   private handleSpyEvent(event: SpyEventType) {
     const {
-            isTracking,
+      isTracking,
       isDirectWriting,
       readTracking,
       changeTracking,
-        } = this.trackingData;
+    } = this.trackingData;
 
-    if (!isDirectWriting) {
-      switch (event.type) {
-        case 'Update':
-          if (isTracking) {
-            this.console.log('Write Tracking(recording)：', event.fullPath);
-            (event as ChangeTrackData)._source = 'Update_recording_SpyEvent';
-            changeTracking.push(event);
-            Object.keys(readTracking)
-              .filter(path => path.startsWith(event.fullPath) && path !== event.fullPath)
-              .forEach(path => {
-                delete readTracking[path];
-              });
-          } else {
-            if (!this.config.autoTracking) {
-              throw new Error('CANNOT modify data without tracking when autoTracking is FALSE.');
-            }
-            this.console.log('Write Tracking(dispatch)：', event.fullPath);
-            (event as ChangeTrackData)._source = 'Update_dispatch_SpyEvent';
-            this.dispatchChange([event]);
+    switch (event.type) {
+      case 'Update':
+        if (isTracking) {
+          this.console.log('Write Tracking(recording)：', event.fullPath);
+          (event as ChangeTrackData)._source = 'Update_recording_SpyEvent';
+          changeTracking.push(event);
+          Object.keys(readTracking)
+            .filter(path => path.startsWith(event.fullPath) && path !== event.fullPath)
+            .forEach(path => {
+              delete readTracking[path];
+            });
+        } else if (!isDirectWriting) {
+          if (!this.config.autoTracking) {
+            throw new Error('CANNOT modify data without tracking when autoTracking is FALSE.');
           }
-          break;
+          this.console.log('Write Tracking(dispatch)：', event.fullPath);
+          (event as ChangeTrackData)._source = 'Update_dispatch_SpyEvent';
+          this.dispatchChange([event]);
+        }
+        break;
 
-        case 'Read':
-          if (isTracking && this.isObject(event.newValue)) {
-            (event as ChangeTrackData)._source = 'Read_SpyEvent';
-            readTracking[event.fullPath] = {
-              value: event
-            };
-          }
-          break;
-      }
+      case 'Read':
+        if ((isTracking || !isDirectWriting) && this.isObject(event.newValue)) {
+          (event as ChangeTrackData)._source = 'Read_SpyEvent';
+          readTracking[event.fullPath] = {
+            value: event
+          };
+        }
+        break;
     }
   }
 
-  private checkNewProps(data: any, path: string = ''): boolean {
-    this.console.groupCollapsed('checkNewProps... ' + path);
-    let hasNewProps = false;
-    if (this.isObject(data)) {
-      commonForEach(data, (key: any) => {
-        const fullPath = getPath(path, key);
-        const meta = this.getMeta(data);
-        if (meta && !meta.values[key]) {
-          hasNewProps = true;
-          this.console.log('[new props]：', fullPath);
-          let change = this.trackingData.changeTracking
-            .find((item: any) => item.fullPath === fullPath);
-          if (change) {
-            change.newValue = data[key];
-            change._source = 'checkNewProps';
-          } else {
-            change = {
-              key: key,
-              type: 'New',
-              newValue: data[key],
-              parentPath: path,
-              fullPath: fullPath,
-              _source: 'checkNewProps',
-            };
-            this.trackingData.changeTracking.push(change);
-          }
+  private checkNewProps(storeData = this.getStoreData()) {
+    const readTrackingPaths = Object.keys(this.trackingData.readTracking);
+    this.console.info('readTrackingPaths...', readTrackingPaths.length);
+    readTrackingPaths.forEach((path) => {
+      let data = this.getDataByPath(path, storeData);
+      this.console.log('[check]:', path, !!data);
+      if (!data) {
+        const event = this.trackingData.readTracking[path].value;
+        this.trackingData.changeTracking.push(event);
+      } else if (this.isObject(data)) {
+        this.console.groupCollapsed('checkNewProps... ' + path);
+        let hasNewProps = false;
+        if (this.isObject(data)) {
+          commonForEach(data, (key: any) => {
+            const fullPath = getPath(path, key);
+            const meta = this.getMeta(data);
+            if (meta && !meta.values[key]) {
+              hasNewProps = true;
+              this.console.log('[new props]：', fullPath);
+              let change = this.trackingData.changeTracking
+                .find((item: any) => item.fullPath === fullPath);
+              if (change) {
+                change.newValue = data[key];
+                change._source = 'checkNewProps';
+              } else {
+                change = {
+                  key: key,
+                  type: 'New',
+                  newValue: data[key],
+                  parentObject: data,
+                  parentPath: path,
+                  fullPath: fullPath,
+                  _source: 'checkNewProps',
+                };
+                this.trackingData.changeTracking.push(change);
+              }
+            }
 
-          this.createDataProxy(data[key], fullPath);
-          this.setProxyProperty(data, key, path);
+            this.createDataProxy(data[key], fullPath);
+            this.setProxyProperty(data, key, path);
+          });
         }
-      });
-    }
-    this.console.groupEnd();
-    return hasNewProps;
+        this.console.groupEnd();
+      }
+    });
+    this.trackingData.readTracking = {};
   }
 
   private createDataProxy(data: any, path = '', deep = true, cycleCheckStartId = -1) {
@@ -442,6 +441,7 @@ export class Odux implements IStoreAdapter {
         this.eventBus,
         this.config,
         this.trackingData,
+        proxyObject,
         proxyObject[key],
         key,
         dataPath,
