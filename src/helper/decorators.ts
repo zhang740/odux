@@ -61,19 +61,19 @@ export class Decorators {
    *
    * @template T OwnPropsType
    * @template P MapperPropsType
-   * @param {(ioc: IocContext) => (ownProps?: T) => P} mapper
+   * @param {(ioc: IocContext, ownProps?: T) => P} mapper
    * @param {(MapperPropsType?: P) => any} component (MapperPropsType only for type) `typeof MapperPropsType`
    * @returns Component
    * @memberof Decorators
    */
   component<T, P>(
-    mapper: (ioc: IocContext) => (ownProps?: T) => P,
+    mapper: (ioc: IocContext, ownProps: T) => P,
     component: (
       // (only for type) `typeof MapperPropsType`
       MapperPropsType?: P
     ) => any
   ) {
-    return oduxConnect<T>(mapper(this.ioc))(component());
+    return oduxConnect<T>((ownProps) => mapper(this.ioc, ownProps))(component());
   }
 }
 
