@@ -7,6 +7,8 @@
 
 An attempt to observable redux.
 
+[prove of concept]
+
 TBC...
 
 ## Install

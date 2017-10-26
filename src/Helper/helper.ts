@@ -1,16 +1,14 @@
 import { IocContext, RegisterOptions } from 'power-di';
 import { getDecorators } from 'power-di/helper';
 import { getSuperClassInfo } from 'power-di/utils';
-import {
-  InferableComponentEnhancerWithProps,
-  DispatchProp,
-} from 'react-redux';
 
-import { connect as oduxConnect, MapStateToProps } from '../core/connect';
 import { BaseStore } from '../store/BaseStore';
 import { IStore, IStoreAdapter } from '../interface';
+import { MapToProps, connect as oduxConnect, ConnectStateType } from '../react-odux';
+import { ChangeDispatch, ChangeEvent } from '../core';
+import { EventBus } from '../event';
 
-export class Decorators {
+export class Helper {
   private decorators = getDecorators(this.ioc);
   public get iocContext() { return this.ioc; }
 
@@ -47,34 +45,38 @@ export class Decorators {
     });
   }
 
-  connect = <T>(mapper: (ioc: IocContext) => MapStateToProps<T, any>) => {
-    return oduxConnect(mapper(IocContext.DefaultInstance));
+  connect = <OwnPropsType>(mapper: MapToProps<OwnPropsType, any>) => {
+    return oduxConnect(this.ioc, mapper);
   }
 
   inject = (type: Object) => {
-
     return this.decorators.lazyInject(type, true);
   }
 
   /**
    * Component
    *
-   * @template T OwnPropsType
-   * @template P MapperPropsType
+   * @template OwnPropsType OwnPropsType
+   * @template MapperPropsType MapperPropsType
    * @param {(ioc: IocContext, ownProps?: T) => P} mapper
    * @param {(MapperPropsType?: P) => any} component (MapperPropsType only for type) `typeof MapperPropsType`
    * @returns Component
    * @memberof Decorators
    */
-  component<T, P>(
-    mapper: (ioc: IocContext, ownProps: T) => P,
+  component<OwnPropsType, MapperPropsType>(
+    mapper: MapToProps<OwnPropsType, MapperPropsType>,
     component: (
       // (only for type) `typeof MapperPropsType`
-      MapperPropsType?: P
+      MapperPropsType: MapperPropsType,
+      ioc: IocContext
     ) => any
   ) {
-    return oduxConnect<T>((ownProps) => mapper(this.ioc, ownProps))(component());
+    return oduxConnect(this.ioc, mapper)(component(undefined, this.ioc));
+  }
+
+  getIOCComponent<T>(type: any) {
+    return this.ioc.get<T>(type);
   }
 }
 
-export const decorators = new Decorators(IocContext.DefaultInstance);
+export const helper = new Helper(IocContext.DefaultInstance);

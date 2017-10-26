@@ -2,13 +2,14 @@ import * as Redux from 'redux';
 import { IocContext } from 'power-di';
 import { logger, isClass } from 'power-di/utils';
 import { EventBus } from '../event';
-import { SpyEvent, SpyEventType } from '../event';
+import { SpyEvent, SpyEventType } from './SpyEvent';
 import { ProxyObject } from './ProxyObject';
 import { guard, commonForEach, compare, shallowCopy, getPath } from '../utils';
 import { IStoreAdapter, IStore } from '../interface';
 import { TrackingData, ChangeTrackData } from './TrackingData';
 import { OduxConfig } from './OduxConfig';
 import { BaseStore } from '../store/BaseStore';
+import { ChangeDispatch } from './ChangeDispatch';
 
 export interface ActionType extends Redux.Action {
   data: ChangeTrackData[];
@@ -28,6 +29,7 @@ export class Odux implements IStoreAdapter {
   private get ioc() { return this.config.iocContext; }
   private reduxStore: Redux.Store<any>;
   private eventBus: EventBus;
+  private changeDispatch: ChangeDispatch;
 
   private isInited = false;
   private dispatchTimer: any;
@@ -42,10 +44,15 @@ export class Odux implements IStoreAdapter {
       ...(this.config || {}),
     };
 
-    this.eventBus = this.ioc.get<EventBus>(EventBus) || new EventBus();
+    this.eventBus = this.ioc.get<EventBus>(EventBus);
+    if (!this.eventBus) {
+      this.eventBus = new EventBus();
+      this.ioc.register(this.eventBus, EventBus);
+    }
     this.eventBus.addEventListener(SpyEvent, (evt: SpyEvent) => {
       this.handleSpyEvent(evt.message);
     });
+    this.changeDispatch = new ChangeDispatch(this.eventBus);
   }
 
   private get console() {
@@ -68,11 +75,12 @@ export class Odux implements IStoreAdapter {
       groupCollapsed: () => { },
       groupEnd: () => { },
     };
-    return this.config.isDebug ? thisConsole : noConsole;
+    return this.config._isDebug ? thisConsole : noConsole;
   }
 
   setReduxStore(store: Redux.Store<any>): Odux {
     this.reduxStore = store;
+    this.changeDispatch.change(store);
     return this;
   }
 
@@ -157,7 +165,7 @@ export class Odux implements IStoreAdapter {
   public transactionChange(func: () => void, err?: (data: Error) => void) {
     this.transactionBegin();
     guard(func, undefined, (error) => {
-      if (this.config.isDebug) {
+      if (this.config._isDebug) {
         this.console.warn('transactionChange error', error);
       }
       err && err(error);
@@ -169,7 +177,7 @@ export class Odux implements IStoreAdapter {
     const oldWriteTrackingStatus = this.trackingData.isDirectWriting;
     this.trackingData.isDirectWriting = true;
     guard(func, undefined, (error) => {
-      if (this.config.isDebug) {
+      if (this.config._isDebug) {
         this.console.warn('directWriteChange error', error);
       }
       err && err(error);
@@ -221,7 +229,7 @@ export class Odux implements IStoreAdapter {
     }
     let newState: any = shallowCopy(state);
     this.directWriteChange(() => {
-      if (this.config.isDebug) {
+      if (this.config._isDebug) {
         this.console.groupCollapsed('mainReducer');
         this.console.log('action:', action);
         action.data.forEach(change => {
@@ -254,7 +262,7 @@ export class Odux implements IStoreAdapter {
           oldLastData = data[name];
           if (copyNew.indexOf(fullPath) < 0) {
             copyNew.push(fullPath);
-            this.console.info('shallow copy：', fullPath);
+            this.console.info('shallow copy: ', fullPath);
             if (this.isObject(oldLastData)) {
               // TODO 多路径同步更新
               data[name] = shallowCopy(oldLastData);
@@ -295,7 +303,7 @@ export class Odux implements IStoreAdapter {
       });
 
       this.createDataProxy(newState, '', false);
-      // if (this.config.isDebug) {
+      // if (this.config._isDebug) {
       // compare.call(this, state, newState, '')
       // }
       this.console.info('[Return]newState');
@@ -316,15 +324,19 @@ export class Odux implements IStoreAdapter {
       isTracking,
       isDirectWriting,
       readTracking,
-      changeTracking,
+      addChangeTracking,
     } = this.trackingData;
 
     switch (event.type) {
       case 'Update':
+        if (event.newValue === event.oldValue) {
+          this.console.log('Data No Change(ignore): ', event.fullPath);
+          return;
+        }
         if (isTracking) {
-          this.console.log('Write Tracking(recording)：', event.fullPath);
+          this.console.log('Write Tracking(recording): ', event.fullPath);
           (event as ChangeTrackData)._source = 'Update_recording_SpyEvent';
-          changeTracking.push(event);
+          addChangeTracking(event);
           Object.keys(readTracking)
             .filter(path => path.startsWith(event.fullPath) && path !== event.fullPath)
             .forEach(path => {
@@ -334,14 +346,14 @@ export class Odux implements IStoreAdapter {
           if (!this.config.autoTracking) {
             throw new Error('CANNOT modify data without tracking when autoTracking is FALSE.');
           }
-          this.console.log('Write Tracking(dispatch)：', event.fullPath);
+          this.console.log('Write Tracking(dispatch): ', event.fullPath);
           (event as ChangeTrackData)._source = 'Update_dispatch_SpyEvent';
           this.dispatchChange([event]);
         }
         break;
 
       case 'Read':
-        if ((isTracking || !isDirectWriting) && this.isObject(event.newValue)) {
+        if ((isTracking || isDirectWriting) && this.isObject(event.newValue)) {
           (event as ChangeTrackData)._source = 'Read_SpyEvent';
           readTracking[event.fullPath] = {
             value: event
@@ -352,29 +364,30 @@ export class Odux implements IStoreAdapter {
   }
 
   private checkNewProps(storeData = this.getStoreData()) {
-    const readTrackingPaths = Object.keys(this.trackingData.readTracking);
+    const { addChangeTracking, changeTracking, readTracking } = this.trackingData;
+
+    const readTrackingPaths = Object.keys(readTracking);
     this.console.info('readTrackingPaths...', readTrackingPaths.length);
     readTrackingPaths.forEach((path) => {
       let data = this.getDataByPath(path, storeData);
-      this.console.log('[check]:', path, !!data);
+      this.console.log('[check]:', path, 'hasData:', !!data);
       if (!data) {
-        const event = this.trackingData.readTracking[path].value;
-        this.trackingData.changeTracking.push(event);
+        const event = readTracking[path].value;
+        addChangeTracking(event);
       } else if (this.isObject(data)) {
         this.console.groupCollapsed('checkNewProps... ' + path);
-        let hasNewProps = false;
         if (this.isObject(data)) {
           commonForEach(data, (key: any) => {
             const fullPath = getPath(path, key);
             const meta = this.getMeta(data);
-            if (meta && !meta.values[key]) {
-              hasNewProps = true;
-              this.console.log('[new props]：', fullPath);
-              let change = this.trackingData.changeTracking
+            let hasNewProps = meta && !meta.values[key];
+            if (hasNewProps) {
+              this.console.log('[new props]: ', fullPath);
+              let change = changeTracking
                 .find((item: any) => item.fullPath === fullPath);
               if (change) {
                 change.newValue = data[key];
-                change._source = 'checkNewProps';
+                change._source = 'checkNewProps(change)';
               } else {
                 change = {
                   key: key,
@@ -383,14 +396,13 @@ export class Odux implements IStoreAdapter {
                   parentObject: data,
                   parentPath: path,
                   fullPath: fullPath,
-                  _source: 'checkNewProps',
+                  _source: 'checkNewProps(read)',
                 };
-                this.trackingData.changeTracking.push(change);
+                addChangeTracking(change);
               }
+              this.createDataProxy(data[key], fullPath);
+              this.setProxyProperty(data, key, path);
             }
-
-            this.createDataProxy(data[key], fullPath);
-            this.setProxyProperty(data, key, path);
           });
         }
         this.console.groupEnd();
@@ -404,14 +416,13 @@ export class Odux implements IStoreAdapter {
       return;
     }
 
-    this.console.groupCollapsed('createDataProxy，Deep：' + deep + ' ' + path);
+    this.console.groupCollapsed('createDataProxy，Deep: ' + deep + ' ' + path);
 
     commonForEach(data, (key: any) => {
       const fullPath = getPath(path, key);
       this.console.log(fullPath);
 
       // TODO 检测循环引用
-
       this.setProxyProperty(data, key, path);
 
       if (deep && this.isObject(data[key]) && key !== Odux.exemptPrefix) {

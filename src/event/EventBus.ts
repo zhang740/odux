@@ -11,7 +11,7 @@ export class EventBus {
    * @param eventType typeof BaseEvent, break with ts@2.4.1
    * @param callback event callback
    */
-  public addEventListener<T>(eventType: any, callback: <T extends BaseEvent>(event: T) => void) {
+  public addEventListener<T extends BaseEvent>(eventType: any, callback: (event: T) => void) {
     const type = this.getEventType(eventType);
     if (!this.eventHandlers[type]) {
       this.eventHandlers[type] = [];
@@ -24,7 +24,7 @@ export class EventBus {
    * @param eventType typeof BaseEvent, break with ts@2.4.1
    * @param callback event callback
    */
-  public removeEventListener<T>(eventType: any, callback: <T extends BaseEvent>(event: T) => void) {
+  public removeEventListener<T extends BaseEvent>(eventType: any, callback: (event: T) => void) {
     const type = this.getEventType(eventType);
     const element = this.eventHandlers[type];
     if (element) {
@@ -35,7 +35,7 @@ export class EventBus {
     }
   }
 
-  public emit(event: BaseEvent) {
+  public emit<T extends BaseEvent>(event: T) {
     if (!(event instanceof BaseEvent)) {
       throw new Error(`need instance of 'BaseEvent', but ${typeof event}.`);
     }

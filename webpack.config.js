@@ -3,10 +3,10 @@ const webpack = require('webpack');
 
 module.exports = {
   entry: {
-    app: [
+    odux: [
       path.resolve(__dirname, 'lib/index.js'),
     ],
-    power: ['power-di']
+    "power-di": ['power-di']
   },
 
   output: {

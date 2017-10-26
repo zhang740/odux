@@ -1,4 +1,4 @@
-import { BaseEvent } from './BaseEvent';
+import { BaseEvent } from '../event';
 
 export interface SpyEventType {
   type: 'Create' | 'Update' | 'Read' | 'New';

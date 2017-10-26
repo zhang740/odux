@@ -40,9 +40,6 @@ dva首先是一个数据框架，他把redux-saga、redux-router等常用的库�
 ### 优点
 把成熟的方案融合在一起，上手容易。
 
-### 缺点
-model和action是一一对应，action无法跨model访问state，reducer沦为修改时才会使用的方法，数据存储结构层次比较深时还是会有所不便（需要保证修改的部分是新对象）
-
 ## Mobx
 抛开函数式，使用setter、getter监听数据变化，使用反应概念，当组件依赖的数据变化时，直接触发组件更新（forceUpdate）。但问题是这种方式绕过了React的一些生命周期，组件无法感知变化的数据字段。
 

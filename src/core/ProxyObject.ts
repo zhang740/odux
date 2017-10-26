@@ -1,4 +1,5 @@
-import { EventBus, SpyEvent } from '../event';
+import { EventBus } from '../event';
+import { SpyEvent } from './SpyEvent';
 import { TrackingData } from './TrackingData';
 import { OduxConfig } from './OduxConfig';
 

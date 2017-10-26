@@ -1,4 +1,4 @@
-export class BaseEvent<EventType = any> {
+export class BaseEvent<EventType = {}> {
 
   public message: EventType;
 
