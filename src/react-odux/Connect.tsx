@@ -52,7 +52,6 @@ export function connect<OwnPropsType, MapperPropsType>(ioc: IocContext, mapper: 
       checkStateChange(props = this.props) {
         const newState = mapper(ioc, this.props);
         this.needUpdate = !shallowEqual(this.state.data, newState);
-        console.warn('debug', this.needUpdate, Connect.displayName, this.state.data, newState);
         if (this.needUpdate) {
           this.setState({
             data: newState,
@@ -61,7 +60,6 @@ export function connect<OwnPropsType, MapperPropsType>(ioc: IocContext, mapper: 
       }
 
       render() {
-        console.log('render', Connect.displayName, this.state);
         return React.createElement(WrappedComponent, this.state.data);
       }
     };
