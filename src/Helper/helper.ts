@@ -86,7 +86,7 @@ export class Helper {
     return this.ioc.get<T>(type);
   }
 
-  tracking = (target: any, key: string, descriptor: PropertyDescriptor) => {
+  tracking = (use = true) => (target: any, key: string, descriptor: PropertyDescriptor) => {
     const helper = this;
     const fn = descriptor.value;
 
@@ -99,7 +99,8 @@ export class Helper {
 
         const boundFn = function () {
           if (helper.odux) {
-            helper.odux.transactionChange(() => {
+            const useFunc = use ? helper.odux.transactionChange : helper.odux.directWriteChange;
+            useFunc.bind(helper.odux)(() => {
               fn.apply(target, [...arguments]);
             });
           } else {
