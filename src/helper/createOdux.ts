@@ -1,6 +1,5 @@
 import { IocContext } from 'power-di';
 import { Odux, OduxConfig } from '../core';
-import { BaseAction } from '../action/BaseAction';
 import { IStoreAdapter } from '../interface';
 
 export function createOdux(config?: OduxConfig, reduxStore?: any) {
@@ -9,7 +8,6 @@ export function createOdux(config?: OduxConfig, reduxStore?: any) {
     ...(config || {}),
   };
   const odux = new Odux(config);
-  BaseAction.GlobalAdapters.push(odux);
   config.iocContext.register(odux, Odux);
   config.iocContext.register(odux, IStoreAdapter);
   odux.initStores();

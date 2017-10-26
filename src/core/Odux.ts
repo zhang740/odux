@@ -377,6 +377,9 @@ export class Odux implements IStoreAdapter {
       } else if (this.isObject(data)) {
         this.console.groupCollapsed('checkNewProps... ' + path);
         if (this.isObject(data)) {
+          if (!this.getMeta(data)) {
+            this.createDataProxy(data);
+          }
           commonForEach(data, (key: any) => {
             const fullPath = getPath(path, key);
             const meta = this.getMeta(data);

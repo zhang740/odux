@@ -11,7 +11,7 @@ export class BaseStore<DataType = any> implements IStore<DataType> {
   }
 
   constructor(
-    private storeAdapter: IStoreAdapter,
+    protected storeAdapter: IStoreAdapter,
   ) {
     storeAdapter.registerStore && storeAdapter.registerStore(this);
   }
@@ -20,7 +20,23 @@ export class BaseStore<DataType = any> implements IStore<DataType> {
     return this.storeAdapter.getStoreData<DataType>(this.type);
   }
 
-  public get Adapter(): IStoreAdapter {
-    return this.storeAdapter;
+  /** 开始跟踪事务 */
+  public transactionBegin() {
+    this.storeAdapter.transactionBegin();
+  }
+
+  /** 批量跟踪 */
+  public transactionChange(func: () => void, err?: (data: Error) => void) {
+    this.storeAdapter.transactionChange(func, err);
+  }
+
+  /** 结束跟踪事务 */
+  public transactionEnd() {
+    this.storeAdapter.transactionEnd();
+  }
+
+  /** 直写变更 */
+  public directWriteChange(func: () => void, err?: (data: Error) => void) {
+    this.storeAdapter.directWriteChange(func, err);
   }
 }

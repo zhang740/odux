@@ -1,7 +1,8 @@
 import { IocContext, RegisterOptions } from 'power-di';
 import { getDecorators } from 'power-di/helper';
-import { getSuperClassInfo } from 'power-di/utils';
+import { getGlobalType, getSuperClassInfo } from 'power-di/utils';
 
+import { Odux } from '../core';
 import { BaseStore } from '../store/BaseStore';
 import { IStore, IStoreAdapter } from '../interface';
 import { MapToProps, connect as oduxConnect, ConnectStateType } from '../react-odux';
@@ -9,8 +10,11 @@ import { ChangeDispatch, ChangeEvent } from '../core';
 import { EventBus } from '../event';
 
 export class Helper {
-  private decorators = getDecorators(this.ioc);
   public get iocContext() { return this.ioc; }
+  private decorators = getDecorators(this.ioc);
+  private get odux() {
+    return helper.ioc.get<Odux>(Odux);
+  }
 
   constructor(private ioc: IocContext) { }
 
@@ -26,14 +30,16 @@ export class Helper {
     };
   }
 
+  /** bindProperty for Store */
   bindProperty = (bindKey?: string, initial?: () => any) => (target: BaseStore, key: string) => {
+    const helper = this;
     const property = bindKey || key;
 
     Object.defineProperty(target, key, {
       get: function (this: BaseStore) {
         let result = this.Data[property];
         if (!result && initial !== undefined) {
-          this.Adapter.directWriteChange(() => {
+          helper.odux.directWriteChange(() => {
             result = this.Data[property] = initial();
           });
         }
@@ -45,10 +51,12 @@ export class Helper {
     });
   }
 
+  /** connect for Component */
   connect = <OwnPropsType>(mapper: MapToProps<OwnPropsType, any>) => {
     return oduxConnect(this.ioc, mapper);
   }
 
+  /** inject for IOCComponent */
   inject = (type: Object) => {
     return this.decorators.lazyInject(type, true);
   }
@@ -76,6 +84,37 @@ export class Helper {
 
   getIOCComponent<T>(type: any) {
     return this.ioc.get<T>(type);
+  }
+
+  tracking = (target: any, key: string, descriptor: PropertyDescriptor) => {
+    const helper = this;
+    const fn = descriptor.value;
+
+    return {
+      configurable: true,
+      get() {
+        if (this === fn.prototype || this.hasOwnProperty(key)) {
+          return fn;
+        }
+
+        const boundFn = function () {
+          if (helper.odux) {
+            helper.odux.transactionChange(() => {
+              fn.apply(target, [...arguments]);
+            });
+          } else {
+            console.warn(`Can't use @tracking, no Odux on IOCContext. method: ${getGlobalType(target.constructor)} -> ${key}`);
+            fn.apply(target, [...arguments]);
+          }
+        };
+        Object.defineProperty(this, key, {
+          value: boundFn,
+          configurable: true,
+          writable: true
+        });
+        return boundFn;
+      }
+    };
   }
 }
 
