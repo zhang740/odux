@@ -54,13 +54,19 @@ export function connect<OwnPropsType, MapperPropsType>(ioc: IocContext, mapper: 
         this.needUpdate = !shallowEqual(this.state.data, newState);
         if (this.needUpdate) {
           this.setState({
-            data: newState,
+            data: {
+              newState
+            },
           });
         }
+        this.needUpdate = this.needUpdate || !shallowEqual(this.props, props);
       }
 
       render() {
-        return React.createElement(WrappedComponent, this.state.data);
+        return React.createElement(WrappedComponent, {
+          ...this.props as any,
+          ...this.state.data,
+        });
       }
     };
 
