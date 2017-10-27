@@ -54,9 +54,7 @@ export function connect<OwnPropsType, MapperPropsType>(ioc: IocContext, mapper: 
         this.needUpdate = !shallowEqual(this.state.data, newState);
         if (this.needUpdate) {
           this.setState({
-            data: {
-              newState
-            },
+            data: newState,
           });
         }
         this.needUpdate = this.needUpdate || !shallowEqual(this.props, props);

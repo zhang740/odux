@@ -32,6 +32,7 @@ export class Odux implements IStoreAdapter {
   private changeDispatch: ChangeDispatch;
 
   private isInited = false;
+  private isReducing = false;
   private dispatchTimer: any;
   private storeKeys: string[] = [];
   private trackingData = new TrackingData();
@@ -182,7 +183,7 @@ export class Odux implements IStoreAdapter {
       }
       err && err(error);
     });
-    this.checkNewProps();
+    !this.isReducing && this.checkNewProps();
     this.trackingData.isDirectWriting = oldWriteTrackingStatus;
   }
 
@@ -213,6 +214,7 @@ export class Odux implements IStoreAdapter {
   }
 
   public mainReducer(state: any, action: ActionType) {
+    this.isReducing = true;
     if (!state) {
       state = {};
       this.storeKeys.forEach(key => {
@@ -308,6 +310,7 @@ export class Odux implements IStoreAdapter {
       // }
       this.console.info('[Return]newState');
     });
+    this.isReducing = true;
     return newState;
   }
 

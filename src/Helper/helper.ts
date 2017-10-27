@@ -1,5 +1,5 @@
-import { IocContext, RegisterOptions } from 'power-di';
-import { getDecorators } from 'power-di/helper';
+import { IocContext, RegisterOptions, RegKeyType } from 'power-di';
+import { getDecorators, Decorators } from 'power-di/helper';
 import { getGlobalType, getSuperClassInfo } from 'power-di/utils';
 
 import { Odux } from '../core';
@@ -17,6 +17,10 @@ export class Helper {
   }
 
   constructor(private ioc: IocContext) { }
+
+  powerDi = () => {
+    return this.decorators;
+  }
 
   registerStore = () => {
     const self = this;
@@ -56,7 +60,12 @@ export class Helper {
     return oduxConnect(this.ioc, mapper);
   }
 
-  /** inject for IOCComponent */
+  /** register for IOCComponent, detail use powerDi */
+  register = (key?: RegKeyType, options?: RegisterOptions) => {
+    return this.decorators.register(key, options);
+  }
+
+  /** lazyInject for IOCComponent, detail use powerDi */
   inject = (type: Object) => {
     return this.decorators.lazyInject(type, true);
   }
@@ -102,7 +111,10 @@ export class Helper {
             const useFunc = use ? helper.odux.transactionChange : helper.odux.directWriteChange;
             useFunc.bind(helper.odux)(() => {
               fn.apply(target, [...arguments]);
-            });
+            }, ((error: Error) => {
+              console.error(`Error: ${getGlobalType(target.constructor)} -> ${key}`);
+              throw error;
+            }));
           } else {
             console.warn(`Can't use @tracking, no Odux on IOCContext. method: ${getGlobalType(target.constructor)} -> ${key}`);
             fn.apply(target, [...arguments]);
