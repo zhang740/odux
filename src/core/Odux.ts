@@ -50,9 +50,7 @@ export class Odux implements IStoreAdapter {
       this.eventBus = new EventBus();
       this.ioc.register(this.eventBus, EventBus);
     }
-    this.eventBus.addEventListener(SpyEvent, (evt: SpyEvent) => {
-      this.handleSpyEvent(evt.message);
-    });
+    this.eventBus.addEventListener(SpyEvent, this.spyEventHandler);
     this.changeDispatch = new ChangeDispatch(this.eventBus);
   }
 
@@ -77,6 +75,10 @@ export class Odux implements IStoreAdapter {
       groupEnd: () => { },
     };
     return this.config._isDebug ? thisConsole : noConsole;
+  }
+
+  dispose() {
+    this.eventBus.removeEventListener(SpyEvent, this.spyEventHandler);
   }
 
   setReduxStore(store: Redux.Store<any>): Odux {
@@ -121,8 +123,9 @@ export class Odux implements IStoreAdapter {
   public getStoreData<T = any>(storeName?: string, initial: any = {}): T {
     const store = this.reduxStore;
     if (!store) {
-      throw new Error('Store not ready');
+      throw new Error('ReduxStore not ready');
     }
+    // TODO tracking时加缓存优化
     let state = store.getState();
     if (this.config.prefix) {
       this.config.prefix.split('.').forEach((name) => {
@@ -314,6 +317,10 @@ export class Odux implements IStoreAdapter {
     return newState;
   }
 
+  private spyEventHandler = (evt: SpyEvent) => {
+    this.handleSpyEvent(evt.message);
+  }
+
   private recoverData(data: any, value: any, key: string) {
     Object.defineProperty(data, key, {
       enumerable: true,
@@ -341,7 +348,7 @@ export class Odux implements IStoreAdapter {
           (event as ChangeTrackData)._source = 'Update_recording_SpyEvent';
           addChangeTracking(event);
           Object.keys(readTracking)
-            .filter(path => path.startsWith(event.fullPath) && path !== event.fullPath)
+            .filter(path => path.indexOf(event.fullPath) === 0 && path !== event.fullPath)
             .forEach(path => {
               delete readTracking[path];
             });
@@ -508,10 +515,14 @@ export class Odux implements IStoreAdapter {
 
   private dispatchAction() {
     this.console.groupCollapsed('Changes Dispatching...' + this.trackingData.changeDatas.length);
-    this.reduxStore.dispatch({
-      type: Odux.REDUX_ACTION_TYPE,
-      data: this.trackingData.changeDatas
-    } as ActionType);
+    if (!this.reduxStore) {
+      this.console.warn('NO [reduxStore], cancel dispatch action.');
+    } else {
+      this.reduxStore.dispatch({
+        type: Odux.REDUX_ACTION_TYPE,
+        data: this.trackingData.changeDatas
+      } as ActionType);
+    }
     this.trackingData.changeDatas = [];
     this.console.groupEnd();
   }

@@ -9,11 +9,14 @@ import { MapToProps, connect as oduxConnect, ConnectStateType } from '../react-o
 import { ChangeDispatch, ChangeEvent } from '../core';
 import { EventBus } from '../event';
 
+// typescript (> 2.6) require
+import * as React from 'react';
+
 export class Helper {
   public get iocContext() { return this.ioc; }
   private decorators = getDecorators(this.ioc);
   private get odux() {
-    return helper.ioc.get<Odux>(Odux);
+    return this.iocContext.get<Odux>(Odux);
   }
 
   constructor(private ioc: IocContext) { }
@@ -43,7 +46,12 @@ export class Helper {
       get: function (this: BaseStore) {
         let result = this.Data[property];
         if (!result && initial !== undefined) {
-          helper.odux.directWriteChange(() => {
+          // FIXME storeAdapter?
+          const odux = (this as any).storeAdapter || helper.odux;
+          if (!odux) {
+            throw new Error(`NO odux before read property [${bindKey} (${key}) - ${getGlobalType(target.constructor)}].`);
+          }
+          odux.directWriteChange(() => {
             result = this.Data[property] = initial();
           });
         }
@@ -91,11 +99,11 @@ export class Helper {
     return oduxConnect(this.ioc, mapper)(component(undefined, this.ioc));
   }
 
-  getIOCComponent<T>(type: any) {
+  getIOCComponent = <T>(type: any) => {
     return this.ioc.get<T>(type);
   }
 
-  tracking = (use = true) => (target: any, key: string, descriptor: PropertyDescriptor) => {
+  tracking = (transaction = true) => (target: any, key: string, descriptor: PropertyDescriptor) => {
     const helper = this;
     const fn = descriptor.value;
 
@@ -107,17 +115,17 @@ export class Helper {
         }
 
         const boundFn = function () {
-          if (helper.odux) {
-            const useFunc = use ? helper.odux.transactionChange : helper.odux.directWriteChange;
-            useFunc.bind(helper.odux)(() => {
-              fn.apply(target, [...arguments]);
+          const odux = (this as any).storeAdapter || helper.odux;
+          if (odux) {
+            const useFunc = transaction ? odux.transactionChange : odux.directWriteChange;
+            useFunc.bind(odux)(function () {
+              fn.apply(target, [...arguments as any]);
             }, ((error: Error) => {
               console.error(`Error: ${getGlobalType(target.constructor)} -> ${key}`);
-              throw error;
             }));
           } else {
             console.warn(`Can't use @tracking, no Odux on IOCContext. method: ${getGlobalType(target.constructor)} -> ${key}`);
-            fn.apply(target, [...arguments]);
+            fn.apply(target, [...arguments as any]);
           }
         };
         Object.defineProperty(this, key, {

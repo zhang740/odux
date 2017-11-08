@@ -2,8 +2,8 @@ import test from 'ava';
 import * as render from 'react-test-renderer';
 import { createStore, applyMiddleware, compose, Store } from 'redux';
 import { BaseStore } from '../lib';
-import { createOdux, createOduxAIO, decorators, getComponent } from '../lib';
-const { registerStore } = decorators;
+import { createOdux, createOduxAIO, helper } from '../lib';
+const { registerStore, getIOCComponent } = helper;
 
 test('odux simple.', (t) => {
   const finalCreateStore: any = compose()(createStore);
@@ -18,12 +18,10 @@ test('odux simple.', (t) => {
   const store = finalCreateStore(rootReducer);
   odux.setReduxStore(store);
 
-  t.true(getComponent<AStore>(AStore) instanceof AStore);
+  t.true(getIOCComponent<AStore>(AStore) instanceof AStore);
 });
 
 test('odux simple AIO.', (t) => {
-  const finalCreateStore: any = compose()(createStore);
-
   @registerStore()
   class AStore extends BaseStore {
 
@@ -31,5 +29,5 @@ test('odux simple AIO.', (t) => {
 
   const odux = createOduxAIO();
 
-  t.true(getComponent<AStore>(AStore) instanceof AStore);
+  t.true(getIOCComponent<AStore>(AStore) instanceof AStore);
 });

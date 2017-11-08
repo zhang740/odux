@@ -1,3 +1,4 @@
+import { IocContext } from 'power-di';
 import { getGlobalType } from 'power-di/utils';
 import { IStore, IStoreAdapter } from '../interface';
 
@@ -12,8 +13,16 @@ export class BaseStore<DataType = any> implements IStore<DataType> {
 
   constructor(
     protected storeAdapter: IStoreAdapter,
+    private ioc?: IocContext,
   ) {
-    storeAdapter.registerStore && storeAdapter.registerStore(this);
+    if (!storeAdapter && ioc) {
+      storeAdapter = ioc.get<IStoreAdapter>(IStoreAdapter);
+    }
+    if (storeAdapter) {
+      storeAdapter.registerStore && storeAdapter.registerStore(this);
+    } else {
+      throw new Error(`registerStore [${this.type}] fail! no storeAdapter.`);
+    }
   }
 
   public get Data(): DataType {
