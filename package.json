@@ -9,7 +9,7 @@
     "build:prod": "tsc && babel lib --out-dir lib",
     "build:dist": "webpack --progress",
     "build:test": "rimraf -- __tests__ && tsc -p tsconfig.test.json",
-    "test": "tsc && npm run build:test && ava -v -s",
+    "test": "tsc -v && tsc && npm run build:test && ava -v -s",
     "test:prod": "npm run build:prod && npm run build:test && ava -v -s",
     "coverage": "nyc npm test",
     "coverage:report": "nyc report --reporter=lcov",
