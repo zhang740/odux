@@ -37,6 +37,21 @@ export class Helper {
     };
   }
 
+  /** connect for Component */
+  connect = <OwnPropsType>(mapper: MapToProps<OwnPropsType, any>) => {
+    return oduxConnect(this.ioc, mapper);
+  }
+
+  /** register for IOCComponent, detail use powerDi */
+  register = (key?: RegKeyType, options?: RegisterOptions) => {
+    return this.decorators.register(key, options);
+  }
+
+  /** lazyInject for IOCComponent, detail use powerDi */
+  inject = (type: Object) => {
+    return this.decorators.lazyInject(type, true);
+  }
+
   /** bindProperty for Store */
   bindProperty = (bindKey?: string, initial?: () => any) => (target: BaseStore, key: string) => {
     const helper = this;
@@ -61,21 +76,6 @@ export class Helper {
         this.Data[property] = value;
       }
     });
-  }
-
-  /** connect for Component */
-  connect = <OwnPropsType>(mapper: MapToProps<OwnPropsType, any>) => {
-    return oduxConnect(this.ioc, mapper);
-  }
-
-  /** register for IOCComponent, detail use powerDi */
-  register = (key?: RegKeyType, options?: RegisterOptions) => {
-    return this.decorators.register(key, options);
-  }
-
-  /** lazyInject for IOCComponent, detail use powerDi */
-  inject = (type: Object) => {
-    return this.decorators.lazyInject(type, true);
   }
 
   /**
@@ -109,32 +109,21 @@ export class Helper {
 
     return {
       configurable: true,
-      get() {
-        if (this === fn.prototype || this.hasOwnProperty(key)) {
-          return fn;
+      writable: false,
+      value: function () {
+        const odux = (this as any).storeAdapter || helper.odux;
+        if (odux) {
+          const useFunc = transaction ? odux.transactionChange : odux.directWriteChange;
+          useFunc.bind(odux)(() => {
+            fn.apply(this, [...arguments as any]);
+          }, ((error: Error) => {
+            console.error(`Error: ${getGlobalType(this.constructor)} -> ${key}`, error);
+          }));
+        } else {
+          console.warn(`Can't use @tracking, no Odux on IOCContext. method: ${getGlobalType(this.constructor)} -> ${key}`);
+          fn.apply(this, [...arguments as any]);
         }
-
-        const boundFn = function () {
-          const odux = (this as any).storeAdapter || helper.odux;
-          if (odux) {
-            const useFunc = transaction ? odux.transactionChange : odux.directWriteChange;
-            useFunc.bind(odux)(function () {
-              fn.apply(target, [...arguments as any]);
-            }, ((error: Error) => {
-              console.error(`Error: ${getGlobalType(target.constructor)} -> ${key}`);
-            }));
-          } else {
-            console.warn(`Can't use @tracking, no Odux on IOCContext. method: ${getGlobalType(target.constructor)} -> ${key}`);
-            fn.apply(target, [...arguments as any]);
-          }
-        };
-        Object.defineProperty(this, key, {
-          value: boundFn,
-          configurable: true,
-          writable: true
-        });
-        return boundFn;
-      }
+      },
     };
   }
 }

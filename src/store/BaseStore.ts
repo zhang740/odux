@@ -26,6 +26,10 @@ export class BaseStore<DataType = any> implements IStore<DataType> {
   }
 
   public get Data(): DataType {
+    if (!this.storeAdapter) {
+      console.error(`NO storeAdapter. [${this.type}]`);
+      return;
+    }
     return this.storeAdapter.getStoreData<DataType>(this.type);
   }
 
