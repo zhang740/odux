@@ -54,15 +54,40 @@ export function createOduxAIO(config?: OduxConfig, middlewares: any[] = [], enha
   return odux;
 }
 
+function combineReducer(odux: Odux, reducer: any) {
+  return (state: any, action: any) => {
+    return odux.mainReducer(reducer(state, action), action);
+  };
+}
+
 export function createOduxEnhancer(config?: OduxConfig) {
   const odux = createOdux(config);
   return (createStore: any) => (reducer: any, preloadedState: any, enhancer: any) => {
-    const store = createStore(reducer, preloadedState, enhancer);
+    const rootReducer = combineReducer(odux, reducer);
+    const store = createStore(rootReducer, preloadedState, enhancer);
     const dispatch = store.dispatch;
     odux.setReduxStore(store);
     return {
       ...store,
       dispatch
     };
+  };
+}
+
+export function createOduxForDva(config?: OduxConfig) {
+  const odux = createOdux(config);
+  return {
+    extraEnhancers: [(createStore: any) => (reducer: any, preloadedState: any, enhancer: any) => {
+      const store = createStore(reducer, preloadedState, enhancer);
+      const dispatch = store.dispatch;
+      odux.setReduxStore(store);
+      return {
+        ...store,
+        dispatch
+      };
+    }],
+    onReducer: (reducer: any) => {
+      return combineReducer(odux, reducer);
+    }
   };
 }

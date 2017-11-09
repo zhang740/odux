@@ -129,7 +129,7 @@ export class Odux implements IStoreAdapter {
     let state = store.getState();
     if (this.config.prefix) {
       this.config.prefix.split('.').forEach((name) => {
-        this.directWriteChange(() => state = state[name] || {});
+        state = state[name] = state[name] || {};
       });
     }
     if (storeName) {
@@ -228,10 +228,6 @@ export class Odux implements IStoreAdapter {
     if (action.type !== Odux.REDUX_ACTION_TYPE) {
       return state;
     }
-    if (!action.data || action.data.length < 1) {
-      this.console.warn('No change data');
-      return state;
-    }
     let newState: any = shallowCopy(state);
     this.directWriteChange(() => {
       if (this.config._isDebug) {
@@ -259,7 +255,7 @@ export class Odux implements IStoreAdapter {
             return;
           }
           if (!data.hasOwnProperty(name)) {
-            this.console.warn(`no object:key:${name} path:${path} change:`, change);
+            this.console.info(`no object:key:${name} path:${path} change:`, change);
             return;
           }
 
@@ -313,7 +309,7 @@ export class Odux implements IStoreAdapter {
       // }
       this.console.info('[Return]newState');
     });
-    this.isReducing = true;
+    this.isReducing = false;
     return newState;
   }
 
