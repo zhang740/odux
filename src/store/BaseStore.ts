@@ -11,6 +11,8 @@ export class BaseStore<DataType = any> implements IStore<DataType> {
     return getGlobalType(this);
   }
 
+  public storeAliasName: string;
+
   constructor(
     protected storeAdapter: IStoreAdapter,
     private ioc?: IocContext,
@@ -21,16 +23,16 @@ export class BaseStore<DataType = any> implements IStore<DataType> {
     if (storeAdapter) {
       storeAdapter.registerStore && storeAdapter.registerStore(this);
     } else {
-      throw new Error(`registerStore [${this.type}] fail! no storeAdapter.`);
+      throw new Error(`registerStore [${this.type} (alias: ${this.storeAliasName})] fail! no storeAdapter.`);
     }
   }
 
   public get Data(): DataType {
     if (!this.storeAdapter) {
-      console.error(`NO storeAdapter. [${this.type}]`);
+      console.error(`NO storeAdapter. [${this.type} (alias: ${this.storeAliasName})]`);
       return;
     }
-    return this.storeAdapter.getStoreData<DataType>(this.type);
+    return this.storeAdapter.getStoreData<DataType>(this.storeAliasName || this.type);
   }
 
   /** 开始跟踪事务 */

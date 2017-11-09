@@ -108,10 +108,15 @@ export class Odux implements IStoreAdapter {
   }
 
   public registerStore(store: IStore, ignoreDuplicate = false) {
-    if (this.storeKeys.indexOf(store.type) >= 0) {
-      if (!ignoreDuplicate) throw new Error(`already has the same store. ${store.type}`);
+    const name = store.storeAliasName || store.type;
+    if (this.storeKeys.indexOf(name) >= 0) {
+      if (!ignoreDuplicate) {
+        throw new Error(`already has the same store. ${name}`);
+      } else {
+        this.console.info(`already has the same store. ${name}`);
+      }
     } else {
-      this.storeKeys.push(store.type);
+      this.storeKeys.push(name);
     }
   }
 
