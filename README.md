@@ -17,4 +17,15 @@ npm i odux --save
 ```
 
 ## Example
+
+TODOList Example:
+
 [https://github.com/zhang740/odux-example](https://github.com/zhang740/odux-example)
+
+Used with dva Example:
+
+[https://github.com/zhang740/odux-dva-mix-example](https://github.com/zhang740/odux-dva-mix-example)
+
+Used with eggjs Example:
+
+[https://github.com/zhang740/odux-egg-example](https://github.com/zhang740/odux-egg-example)
