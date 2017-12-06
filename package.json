@@ -1,6 +1,6 @@
 {
   "name": "odux",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "observable redux",
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
@@ -17,7 +17,7 @@
     "report": "npm run coverage && npm run coverage:report",
     "reinstall": "rimraf -- node_modules && npm install",
     "prepare": "tsc -v && npm run clean && npm run build:prod && npm run build:dist",
-    "postinstall": "node scripts/published.js"
+    "postpublish": "node scripts/published.js"
   },
   "ava": {
     "files": [
