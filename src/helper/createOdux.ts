@@ -13,17 +13,6 @@ export function createOdux(config?: OduxConfig, reduxStore?: any) {
   config = mergeConfig(config);
   const odux = new Odux(config);
 
-  if (config.iocContext.get(Odux)) {
-    console.warn('is already has [Odux] in IocContext, this new instance CANNOT register in IocContext with [Odux].');
-  } else {
-    config.iocContext.register(odux, Odux);
-  }
-
-  if (config.iocContext.get(IStoreAdapter)) {
-    console.warn('is already has [IStoreAdapter] in IocContext, this new instance CANNOT register in IocContext with [IStoreAdapter].');
-  } else {
-    config.iocContext.register(odux, IStoreAdapter);
-  }
   if (reduxStore) {
     odux.setReduxStore(reduxStore);
   }
@@ -50,7 +39,7 @@ export function createOduxAIO(config?: OduxConfig, middlewares: any[] = [], enha
   const store = createStore(odux.mainReducer.bind(odux), enhancer);
 
   odux.setReduxStore(store);
-
+  odux.initStores();
   return odux;
 }
 

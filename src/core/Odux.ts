@@ -45,6 +45,20 @@ export class Odux implements IStoreAdapter {
       ...(this.config || {}),
     };
 
+    // register to iocContext
+    if (config.iocContext.get(Odux)) {
+      this.console.warn('is already has [Odux] in IocContext, this new instance CANNOT register in IocContext with [Odux].');
+    } else {
+      config.iocContext.register(this, Odux);
+    }
+
+    if (config.iocContext.get(IStoreAdapter)) {
+      this.console.warn('is already has [IStoreAdapter] in IocContext, this new instance CANNOT register in IocContext with [IStoreAdapter].');
+    } else {
+      config.iocContext.register(this, IStoreAdapter);
+    }
+
+    // configure event bus
     this.eventBus = this.ioc.get<EventBus>(EventBus);
     if (!this.eventBus) {
       this.eventBus = new EventBus();
