@@ -48,8 +48,8 @@ export class Helper {
   }
 
   /** lazyInject for IOCComponent, detail use powerDi */
-  inject = (type: Object) => {
-    return this.decorators.lazyInject(type, true);
+  inject = (type?: Object) => {
+    return this.decorators.lazyInject({ type, always: true });
   }
 
   /** bindProperty for Store */
