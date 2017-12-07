@@ -14,10 +14,17 @@
     "preserveConstEnums": true,
     "suppressImplicitAnyIndexErrors": true,
     "rootDir": "src",
-    "outDir": "error",
+    "outDir": "lib",
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "sourceMap": true
-  }
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "lib"
+  ]
 }
-// only for test

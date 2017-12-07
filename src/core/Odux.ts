@@ -45,6 +45,11 @@ export class Odux implements IStoreAdapter {
       ...(this.config || {}),
     };
 
+    if (!config.iocContext) {
+      this.console.warn('no iocContext in config, use IocContext.DefaultInstance.');
+      config.iocContext = IocContext.DefaultInstance;
+    }
+
     // register to iocContext
     if (config.iocContext.get(Odux)) {
       this.console.warn('is already has [Odux] in IocContext, this new instance CANNOT register in IocContext with [Odux].');
