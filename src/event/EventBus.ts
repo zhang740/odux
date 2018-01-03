@@ -1,5 +1,4 @@
 import { BaseEvent } from './BaseEvent';
-import { guard } from '../utils/guard';
 import { getGlobalType } from 'power-di/utils';
 
 export class EventBus {
@@ -33,6 +32,11 @@ export class EventBus {
         element.splice(index, 1);
       }
     }
+  }
+
+  public removeAllEventListeners(eventType: any) {
+    const type = this.getEventType(eventType);
+    this.eventHandlers[type] = [];
   }
 
   public emit<T extends BaseEvent>(event: T) {
