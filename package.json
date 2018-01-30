@@ -5,29 +5,30 @@
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
   "scripts": {
-    "clean": "rimraf -- dist lib",
-    "build:prod": "tsc -p tsconfig.build.json && babel lib --out-dir lib",
+    "clean": "rimraf -- dist lib/**/*.js lib/**/*.js.map lib/**/*.d.ts test/**/*.js test/**/*.js.map test/**/*.d.ts",
+    "lint": "tslint -p .",
+    "autod": "autod",
+    "build:prod": "tsc && babel lib --out-dir lib && build:dist",
     "build:dist": "webpack --progress",
-    "build:test": "rimraf -- __tests__ && tsc -p tsconfig.test.json",
-    "test": "tsc -p tsconfig.build.json && npm run build:test && ava -v -s",
-    "test:prod": "npm run build:prod && npm run build:test && ava -v -s",
+    "test": "npm run lint -- --fix && npm run test-local",
+    "test:prod": "npm run build:prod && ava -v -s",
+    "test-local": "tsc && ava -v -s",
     "coverage": "nyc npm test",
     "coverage:report": "nyc report --reporter=lcov",
     "coverage:upload": "cat ./coverage/lcov.info | coveralls",
     "report": "npm run coverage && npm run coverage:report",
-    "reinstall": "rimraf -- node_modules && npm install",
-    "prepare": "tsc -v && npm run clean && npm run build:prod && npm run build:dist",
+    "prepublish": "npm run clean && npm run test",
     "postpublish": "node scripts/published.js"
   },
   "ava": {
     "files": [
-      "__tests__/*.js"
+      "test/*.js"
     ]
   },
   "files": [
-    "index.js",
-    "index.d.ts",
-    "lib"
+    "lib/*.js",
+    "lib/*.d.ts",
+    "dist"
   ],
   "keywords": [
     "react",
@@ -49,9 +50,10 @@
     "redux": "^3.x"
   },
   "devDependencies": {
-    "@types/react": "^16.0.21",
+    "@types/node": "^9.4.0",
+    "@types/react": "^16.0.35",
     "@types/react-test-renderer": "^16.0.0",
-    "ava": "^0.23.0",
+    "ava": "^0.25.0",
     "babel": "^6.23.0",
     "babel-core": "^6.26.0",
     "babel-loader": "^7.1.2",
@@ -59,14 +61,14 @@
     "babel-preset-react": "6.24.1",
     "babel-preset-stage-1": "6.24.1",
     "babel-cli": "^6.26.0",
-    "ts-loader": "^3.1.1",
+    "ts-loader": "^3.3.1",
     "coveralls": "^3.0.0",
-    "nyc": "^11.3.0",
-    "react": "^16.0.0",
-    "react-test-renderer": "^16.0.0",
+    "nyc": "^11.4.1",
+    "react": "^16.2.0",
+    "react-test-renderer": "^16.2.0",
     "rimraf": "^2.6.2",
-    "tslint": "^5.8.0",
-    "typescript": "^2.6.1",
-    "webpack": "^3.8.1"
+    "tslint": "^5.9.1",
+    "typescript": "^2.6.2",
+    "webpack": "^3.10.0"
   }
 }
