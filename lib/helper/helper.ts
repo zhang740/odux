@@ -11,6 +11,7 @@ import { EventBus } from '../event';
 
 // typescript (> 2.6) require
 import * as React from 'react';
+import { getClsTypeByDecorator } from 'power-di/lib/helper/decorators';
 
 export class Helper {
   public get iocContext() { return this.ioc; }
@@ -23,7 +24,7 @@ export class Helper {
     this.powerDi = this.powerDi.bind(this);
     this.registerStore = this.registerStore.bind(this);
     this.connect = this.connect.bind(this);
-    this.bindData = this.bindData.bind(this);
+    this.connectData = this.connectData.bind(this);
     this.register = this.register.bind(this);
     this.inject = this.inject.bind(this);
     this.bindProperty = this.bindProperty.bind(this);
@@ -53,23 +54,27 @@ export class Helper {
     return oduxConnect(this.ioc, mapper) as any;
   }
 
-  bindData = <T>(getData: (ioc: IocContext) => T) => (target: any, key: string) => {
-    if (!target.__ODUX_PROPS) {
-      Object.defineProperty(target, '__ODUX_PROPS', {
-        enumerable: false,
-        writable: false,
-        value: {},
-      });
-    }
-    target.__ODUX_PROPS[key] = getData;
-    console.log(target, target.__ODUX_PROPS);
-
-    return {
-      get: function () {
-        return this.props.__odux_bind[key] as T;
+  connectData = <T>(typeCls?: any, getData?: (ioc: IocContext) => T) =>
+    (target: any, key: string) => {
+      if (!target.__ODUX_PROPS) {
+        Object.defineProperty(target, '__ODUX_PROPS', {
+          enumerable: false,
+          writable: false,
+          value: {},
+        });
       }
-    } as any;
-  }
+      if (getData) {
+        target.__ODUX_PROPS[key] = getData;
+      } else {
+        target.__ODUX_PROPS[key] = () => this.ioc.get(getClsTypeByDecorator(typeCls, target, key));
+      }
+
+      return {
+        get: function () {
+          return this.props.__odux_bind[key] as T;
+        }
+      } as any;
+    }
 
   /** register for IOCComponent, detail use powerDi */
   register = (key?: RegKeyType, options?: RegisterOptions) => {

@@ -40,8 +40,8 @@ test('react component connect.', (t) => {
   );
 });
 
-test('react component connect bindData.', (t) => {
-  const { registerStore, connect, bindProperty, bindData } = getHelper();
+test('react component connect connectData.', (t) => {
+  const { registerStore, connect, bindProperty, connectData } = getHelper();
 
   @registerStore()
   class AStore extends BaseStore {
@@ -51,12 +51,16 @@ test('react component connect bindData.', (t) => {
 
   @connect()
   class TestComponent extends React.Component<{}, {}> {
-    @bindData((ioc) => ioc.get<AStore>(AStore).testData)
+    @connectData(undefined, (ioc) => ioc.get<AStore>(AStore).testData)
     injectData: { str: string };
+
+    @connectData()
+    withDefault: AStore;
 
     componentWillMount() {
       console.log(this.props);
       t.true(this.injectData.str === 'TEST_DATA');
+      t.true(this.withDefault.testData.str === 'TEST_DATA');
     }
 
     render(): any {

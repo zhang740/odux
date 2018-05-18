@@ -1,6 +1,6 @@
 {
   "name": "odux",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "observable redux",
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
@@ -18,7 +18,7 @@
     "coverage:report": "nyc report --reporter=lcov",
     "coverage:upload": "cat ./coverage/lcov.info | coveralls",
     "report": "npm run coverage && npm run coverage:report",
-    "prepublish": "npm run clean && npm run test && npm run build:prod && npm run es",
+    "prepublish": "npm run clean && npm run test && npm run build:prod",
     "postpublish": "node scripts/published.js",
     "es": "rimraf -- es && tsc -p tsconfig.es.json"
   },
@@ -50,7 +50,7 @@
   },
   "homepage": "https://github.com/zhang740/odux#readme",
   "dependencies": {
-    "power-di": "^1.2.0",
+    "power-di": "^1.4.10",
     "redux": "^3.x"
   },
   "devDependencies": {

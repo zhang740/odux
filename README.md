@@ -9,7 +9,82 @@ An attempt to observable redux.
 
 [prove of concept]
 
-TBC...
+### Model define
+```ts
+@registerStore()
+export class UserModel extends BaseStore<{
+  /** 昵称 */
+  nick: string;
+  /** 头像Url */
+  avatar: string;
+  /** 系统角色 */
+  role: UserRoleType;
+  /** 是否为开发者 */
+  developer: boolean;
+  }> {
+  storeAliasName = 'user';
+}
+
+// or
+
+@registerStore()
+export class UserModel extends BaseStore {
+  storeAliasName = 'user';
+
+  /** 昵称 */
+  @bindProperty('nickname', () => 'defaultValue')
+  nick: string;
+  /** 头像Url */
+  @bindProperty()
+  avatar: string;
+  /** 系统角色 */
+  @bindProperty()
+  role: UserRoleType;
+  /** 是否为开发者 */
+  @bindProperty()
+  developer: boolean;
+}
+```
+
+### Component
+```tsx
+@connect() // or connect((ioc, props) => ({ user: ioc.get<UserModel>(UserModel) }))
+export default class extends React.PureComponent<PropsType, StateType> {
+
+  @connectData()
+  user: UserModel;
+
+  render() {
+    const { avatar, nick } = this.user;
+
+    return (
+      <div>
+        {nick}
+      </div>
+    );
+  }
+}
+
+// also use helper.component for type helper.
+export default helper.component(
+  (ioc, ownProps: PropsType) => ({
+    user: ioc.get<UserModel>(UserModel),
+  }),
+  (MapperType, ioc) => {
+    type MixPropsType = PropsType & typeof MapperType;
+    class ComponentName extends React.PureComponent<MixPropsType, StateType> {
+      render() {
+        return (
+          <div>
+            {this.props.user.nick}
+          </div>
+        );
+      }
+    }
+    return ComponentName;
+  }
+);
+```
 
 ## Install
 ```shell
