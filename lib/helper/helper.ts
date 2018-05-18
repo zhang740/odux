@@ -19,7 +19,18 @@ export class Helper {
     return this.iocContext.get<Odux>(Odux);
   }
 
-  constructor(private ioc: IocContext) { }
+  constructor(private ioc: IocContext) {
+    this.powerDi = this.powerDi.bind(this);
+    this.registerStore = this.registerStore.bind(this);
+    this.connect = this.connect.bind(this);
+    this.bindData = this.bindData.bind(this);
+    this.register = this.register.bind(this);
+    this.inject = this.inject.bind(this);
+    this.bindProperty = this.bindProperty.bind(this);
+    this.component = this.component.bind(this);
+    this.getIOCComponent = this.getIOCComponent.bind(this);
+    this.tracking = this.tracking.bind(this);
+  }
 
   powerDi = () => {
     return this.decorators;
@@ -38,8 +49,26 @@ export class Helper {
   }
 
   /** connect for Component */
-  connect = <OwnPropsType>(mapper: MapToProps<OwnPropsType, any>) => {
-    return oduxConnect(this.ioc, mapper);
+  connect = <OwnPropsType>(mapper?: MapToProps<OwnPropsType, any>) => {
+    return oduxConnect(this.ioc, mapper) as any;
+  }
+
+  bindData = <T>(getData: (ioc: IocContext) => T) => (target: any, key: string) => {
+    if (!target.__ODUX_PROPS) {
+      Object.defineProperty(target, '__ODUX_PROPS', {
+        enumerable: false,
+        writable: false,
+        value: {},
+      });
+    }
+    target.__ODUX_PROPS[key] = getData;
+    console.log(target, target.__ODUX_PROPS);
+
+    return {
+      get: function () {
+        return this.props.__odux_bind[key] as T;
+      }
+    } as any;
   }
 
   /** register for IOCComponent, detail use powerDi */
@@ -91,7 +120,7 @@ export class Helper {
   component<OwnPropsType, MapperPropsType>(
     mapper: MapToProps<OwnPropsType, MapperPropsType>,
     component: (
-      // (only for type) `typeof MapperPropsType`
+      /** (only for type) `typeof MapperPropsType` */
       MapperPropsType: MapperPropsType,
       ioc: IocContext
     ) => any

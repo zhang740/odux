@@ -1,6 +1,6 @@
 {
   "name": "odux",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "observable redux",
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
@@ -22,7 +22,8 @@
   },
   "ava": {
     "files": [
-      "test/*.js"
+      "test/*.js",
+      "test/helper/*.js"
     ]
   },
   "files": [

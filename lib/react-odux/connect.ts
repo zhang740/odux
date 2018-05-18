@@ -14,7 +14,22 @@ export interface StateType {
 
 export function connect<OwnPropsType, MapperPropsType>(ioc: IocContext, mapper: MapToProps<OwnPropsType, MapperPropsType>) {
 
-  return function (WrappedComponent: any) {
+  return function (realComponent: any) {
+    if (!mapper) {
+      mapper = () => {
+        const __odux_bind = {};
+        const metadata = realComponent.prototype.__ODUX_PROPS;
+        if (metadata) {
+          for (const key in metadata) {
+            __odux_bind[key] = metadata[key](ioc);
+          }
+        }
+        return {
+          __odux_bind,
+        } as any;
+      };
+    }
+
     const Connect = class extends React.Component<OwnPropsType, StateType> {
       static WrappedComponent: any;
       static displayName: string;
@@ -61,16 +76,16 @@ export function connect<OwnPropsType, MapperPropsType>(ioc: IocContext, mapper: 
       }
 
       render() {
-        return React.createElement(WrappedComponent, {
+        return React.createElement(realComponent, {
           ...this.props as any,
           ...this.state.data,
         });
       }
     };
 
-    const wrappedComponentName = WrappedComponent.displayName
-      || WrappedComponent.name
-      || getGlobalType(WrappedComponent)
+    const wrappedComponentName = realComponent.displayName
+      || realComponent.name
+      || getGlobalType(realComponent)
       || 'Component';
     Connect.displayName = `Odux(${wrappedComponentName})`;
 
