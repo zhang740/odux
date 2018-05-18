@@ -7,7 +7,7 @@
 
 An attempt to observable redux.
 
-[prove of concept]
+## Quickview
 
 ### Model define
 ```ts
@@ -85,6 +85,21 @@ export default helper.component(
   }
 );
 ```
+
+## Integration with other redux-base
+
+### dva
+
+```ts
+const app = dva({
+  ...
+  extraEnhancers: [createOduxEnhancer()],
+});
+```
+
+### createOduxEnhancer
+
+### combineReducer
 
 ## Install
 ```shell
