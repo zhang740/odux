@@ -1,9 +1,10 @@
 {
   "name": "odux",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "observable redux",
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
+  "module": "./es/index.js",
   "scripts": {
     "clean": "rimraf -- dist lib/**/*.js lib/**/*.js.map lib/**/*.d.ts test/**/*.js test/**/*.js.map test/**/*.d.ts",
     "lint": "tslint -p .",
@@ -17,8 +18,9 @@
     "coverage:report": "nyc report --reporter=lcov",
     "coverage:upload": "cat ./coverage/lcov.info | coveralls",
     "report": "npm run coverage && npm run coverage:report",
-    "prepublish": "npm run clean && npm run test",
-    "postpublish": "node scripts/published.js"
+    "prepublish": "npm run clean && npm run test && npm run es",
+    "postpublish": "node scripts/published.js",
+    "es": "rimraf -- es && tsc -p tsconfig.es.json"
   },
   "ava": {
     "files": [
@@ -27,6 +29,7 @@
     ]
   },
   "files": [
+    "es/**/*.js",
     "lib/**/*.js",
     "lib/**/*.d.ts",
     "dist"
