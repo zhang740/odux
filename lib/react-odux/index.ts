@@ -1,1 +1,1 @@
-export { connect, MapToProps, StateType as ConnectStateType } from './Connect';
+export { connect, MapToProps, StateType as ConnectStateType } from './connect';
