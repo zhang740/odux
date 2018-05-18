@@ -1,6 +1,6 @@
 {
   "name": "odux",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "observable redux",
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
@@ -9,7 +9,7 @@
     "clean": "rimraf -- dist lib/**/*.js lib/**/*.js.map lib/**/*.d.ts test/**/*.js test/**/*.js.map test/**/*.d.ts",
     "lint": "tslint -p .",
     "autod": "autod",
-    "build:prod": "tsc && babel lib --out-dir lib && build:dist",
+    "build:prod": "tsc && babel lib --out-dir lib",
     "build:dist": "webpack --progress",
     "test": "npm run lint -- --fix && npm run test-local",
     "test:prod": "npm run build:prod && ava -v -s",
@@ -18,7 +18,7 @@
     "coverage:report": "nyc report --reporter=lcov",
     "coverage:upload": "cat ./coverage/lcov.info | coveralls",
     "report": "npm run coverage && npm run coverage:report",
-    "prepublish": "npm run clean && npm run test && npm run es",
+    "prepublish": "npm run clean && npm run test && npm run build:prod && npm run es",
     "postpublish": "node scripts/published.js",
     "es": "rimraf -- es && tsc -p tsconfig.es.json"
   },
