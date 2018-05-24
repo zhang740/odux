@@ -58,7 +58,6 @@ test('react component connect connectData.', (t) => {
     withDefault: AStore;
 
     componentWillMount() {
-      console.log(this.props);
       t.true(this.injectData.str === 'TEST_DATA');
       t.true(this.withDefault.testData.str === 'TEST_DATA');
     }
@@ -70,5 +69,42 @@ test('react component connect connectData.', (t) => {
 
   render.create(
     <TestComponent />
+  );
+});
+
+test('react component connect props merge.', (t) => {
+  const { registerStore, connect, bindProperty, connectData } = getHelper();
+
+  @registerStore()
+  class AStore extends BaseStore {
+    @bindProperty('test', () => ({ str: 'TEST_DATA' }))
+    testData: { str: string };
+  }
+
+  @connect((ioc, props) => ({ test2: '333' }))
+  class TestComponent extends React.Component<{
+    test: string,
+    test2?: string
+  }, {}> {
+    @connectData(undefined, (ioc) => ioc.get<AStore>(AStore).testData)
+    injectData: { str: string };
+
+    @connectData()
+    withDefault: AStore;
+
+    componentWillMount() {
+      t.true(this.injectData.str === 'TEST_DATA');
+      t.true(this.withDefault.testData.str === 'TEST_DATA');
+      t.true(this.props.test === '123123');
+      t.true(this.props.test2 === '333');
+    }
+
+    render(): any {
+      return null;
+    }
+  }
+
+  render.create(
+    <TestComponent test="123123" />
   );
 });

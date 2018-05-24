@@ -15,8 +15,13 @@ export interface StateType {
 export function connect<OwnPropsType, MapperPropsType>(ioc: IocContext, mapper: MapToProps<OwnPropsType, MapperPropsType>) {
 
   return function (realComponent: any) {
-    if (!mapper) {
-      mapper = () => {
+    const propsMapper: MapToProps<OwnPropsType, MapperPropsType> =
+      (ioc, ownProps) => {
+        let mapperProps = {};
+        if (mapper) {
+          mapperProps = mapper(ioc, ownProps) || {};
+        }
+
         const __odux_bind = {};
         const metadata = realComponent.prototype.__ODUX_PROPS;
         if (metadata) {
@@ -25,10 +30,11 @@ export function connect<OwnPropsType, MapperPropsType>(ioc: IocContext, mapper: 
           }
         }
         return {
+          ...(ownProps || {}),
+          ...mapperProps,
           __odux_bind,
         } as any;
       };
-    }
 
     const Connect = class extends React.Component<OwnPropsType, StateType> {
       static WrappedComponent: any;
@@ -42,7 +48,7 @@ export function connect<OwnPropsType, MapperPropsType>(ioc: IocContext, mapper: 
 
         this.eventBus = ioc.get(EventBus);
 
-        this.state = { data: mapper(ioc, props), };
+        this.state = { data: propsMapper(ioc, props), };
       }
 
       onReduxChange = (evt: ChangeEvent) => {
@@ -65,7 +71,7 @@ export function connect<OwnPropsType, MapperPropsType>(ioc: IocContext, mapper: 
       }
 
       checkStateChange(props = this.props) {
-        const newState = mapper(ioc, this.props);
+        const newState = propsMapper(ioc, this.props);
         this.needUpdate = !shallowEqual(this.state.data, newState);
         if (this.needUpdate) {
           this.setState({
