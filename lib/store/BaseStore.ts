@@ -1,38 +1,63 @@
-import { IocContext } from 'power-di';
 import { getGlobalType } from 'power-di/utils';
 import { IStore, IStoreAdapter } from '../interface';
+import { IocContext } from 'power-di';
 
-export class BaseStore<DataType = any> implements IStore<DataType> {
+export const DataSymbol = Symbol('DataSymbol');
 
-  public get type(): string {
-    return getGlobalType(this.constructor);
-  }
+export class BaseStore implements IStore {
+  private static excludeKeys = ['type', DataSymbol, 'storeAliasName', 'storeAdapter'];
   public static get type(): string {
     return getGlobalType(this);
   }
-
-  public storeAliasName: string;
-
-  constructor(
-    protected storeAdapter: IStoreAdapter,
-    private ioc?: IocContext,
-  ) {
-    if (!storeAdapter && ioc) {
-      storeAdapter = ioc.get<IStoreAdapter>(IStoreAdapter);
-    }
-    if (storeAdapter) {
-      storeAdapter.registerStore && storeAdapter.registerStore(this);
-    } else {
-      throw new Error(`registerStore [${this.type} (alias: ${this.storeAliasName})] fail! no storeAdapter.`);
-    }
+  public get type(): string {
+    return getGlobalType(this.constructor);
   }
 
-  public get Data(): DataType {
+  public get [DataSymbol](): any {
     if (!this.storeAdapter) {
       console.error(`NO storeAdapter. [${this.type} (alias: ${this.storeAliasName})]`);
       return;
     }
-    return this.storeAdapter.getStoreData<DataType>(this.storeAliasName || this.type);
+    return this.storeAdapter.getStoreData(this.storeAliasName || this.type);
+  }
+  storeAliasName: string;
+  private storeAdapter: IStoreAdapter;
+  constructor(storeOrIoC: IStoreAdapter | IocContext) {
+    this.storeAdapter =
+      storeOrIoC instanceof IocContext ? storeOrIoC.get(IStoreAdapter) : storeOrIoC;
+
+    if (!this.storeAdapter) {
+      throw new Error(
+        `registerStore [${this.type} (alias: ${this.storeAliasName})] fail! no storeAdapter.`
+      );
+    }
+
+    function needRedirect(target: any, p: any) {
+      if (BaseStore.excludeKeys.indexOf(p) >= 0) {
+        return false;
+      }
+      const value = target[p];
+      const type = typeof value;
+      return ['undefined', 'number', 'string', 'object'].indexOf(type) >= 0;
+    }
+
+    const thisProxy = new Proxy(this, {
+      get(target, p) {
+        const need = needRedirect(target, p);
+        return need ? target[DataSymbol][p] : target[p];
+      },
+      set(target, p, value) {
+        if (needRedirect(target, p)) {
+          target[DataSymbol][p] = value;
+        } else {
+          target[p] = value;
+        }
+        return true;
+      },
+    });
+
+    this.storeAdapter.registerStore(thisProxy);
+    return thisProxy;
   }
 
   /** 开始跟踪事务 */

@@ -1,2 +1,2 @@
 export * from './createOdux';
-export * from './helper';
+export { inject } from './helper';

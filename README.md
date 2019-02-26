@@ -10,80 +10,29 @@ An attempt to observable redux.
 ## Quickview
 
 ### Model define
+
 ```ts
-@registerStore()
-export class UserModel extends BaseStore<{
-  /** 昵称 */
-  nick: string;
-  /** 头像Url */
-  avatar: string;
-  /** 系统角色 */
-  role: UserRoleType;
-  /** 是否为开发者 */
-  developer: boolean;
-  }> {
-  storeAliasName = 'user';
-}
-
-// or
-
-@registerStore()
-export class UserModel extends BaseStore {
-  storeAliasName = 'user';
-
-  /** 昵称 */
-  @bindProperty('nickname', () => 'defaultValue')
-  nick: string;
-  /** 头像Url */
-  @bindProperty()
-  avatar: string;
-  /** 系统角色 */
-  @bindProperty()
-  role: UserRoleType;
-  /** 是否为开发者 */
-  @bindProperty()
-  developer: boolean;
+class AStore extends BaseStore {
+  testData: { str: string };
 }
 ```
 
 ### Component
+
 ```tsx
-@connect() // or connect((ioc, props) => ({ user: ioc.get<UserModel>(UserModel) }))
-export default class extends React.PureComponent<PropsType, StateType> {
+@connect()
+class TestComponent extends React.PureComponent {
+  @inject()
+  aStore: AStore;
 
-  @connectData()
-  user: UserModel;
+  componentWillMount() {
+    t.true(this.aStore instanceof AStore);
+  }
 
-  render() {
-    const { avatar, nick } = this.user;
-
-    return (
-      <div>
-        {nick}
-      </div>
-    );
+  render(): any {
+    return null;
   }
 }
-
-// also use helper.component for type helper.
-export default helper.component(
-  (ioc, ownProps: PropsType) => ({
-    user: ioc.get<UserModel>(UserModel),
-  }),
-  (MapperType, ioc) => {
-    type MixPropsType = PropsType & typeof MapperType;
-    class ComponentName extends React.PureComponent<MixPropsType, StateType> {
-      render() {
-        return (
-          <div>
-            {this.props.user.nick}
-          </div>
-        );
-      }
-    }
-    return ComponentName;
-  }
-);
 ```
 
 ## Integration with other redux-base
@@ -102,20 +51,7 @@ const app = dva({
 ### combineReducer
 
 ## Install
+
 ```shell
 npm i odux --save
 ```
-
-## Example
-
-TODOList Example:
-
-[https://github.com/zhang740/odux-example](https://github.com/zhang740/odux-example)
-
-Used with dva Example:
-
-[https://github.com/zhang740/odux-dva-mix-example](https://github.com/zhang740/odux-dva-mix-example)
-
-Used with eggjs Example:
-
-[https://github.com/zhang740/odux-egg-example](https://github.com/zhang740/odux-egg-example)

@@ -1,6 +1,4 @@
-import { IocContext } from 'power-di';
 import { Odux, OduxConfig } from '../core';
-import { IStoreAdapter } from '../interface';
 
 function mergeConfig(config?: OduxConfig) {
   return {
@@ -20,22 +18,19 @@ export function createOdux(config?: OduxConfig, reduxStore?: any) {
   return odux;
 }
 
-import { createStore, applyMiddleware, compose, Store } from 'redux';
+import { createStore, applyMiddleware, compose } from 'redux';
 export function createOduxAIO(config?: OduxConfig, middlewares: any[] = [], enhancers: any[] = []) {
   config = mergeConfig(config);
   const odux = new Odux(config);
 
   const composeEnhancers =
     config.devMode &&
-      typeof window === 'object' &&
-      (window as any).__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ ?
-      (window as any).__REDUX_DEVTOOLS_EXTENSION_COMPOSE__({
-      }) : compose;
+    typeof window === 'object' &&
+    (window as any).__REDUX_DEVTOOLS_EXTENSION_COMPOSE__
+      ? (window as any).__REDUX_DEVTOOLS_EXTENSION_COMPOSE__({})
+      : compose;
 
-  const enhancer = composeEnhancers(
-    applyMiddleware(...middlewares),
-    ...enhancers
-  );
+  const enhancer = composeEnhancers(applyMiddleware(...middlewares), ...enhancers);
   const store = createStore(odux.mainReducer.bind(odux), enhancer);
 
   odux.setReduxStore(store);
@@ -58,7 +53,7 @@ export function createOduxEnhancer(config?: OduxConfig) {
     odux.setReduxStore(store);
     return {
       ...store,
-      dispatch
+      dispatch,
     };
   };
 }
@@ -66,17 +61,19 @@ export function createOduxEnhancer(config?: OduxConfig) {
 export function createOduxForDva(config?: OduxConfig) {
   const odux = createOdux(config);
   return {
-    extraEnhancers: [(createStore: any) => (reducer: any, preloadedState: any, enhancer: any) => {
-      const store = createStore(reducer, preloadedState, enhancer);
-      const dispatch = store.dispatch;
-      odux.setReduxStore(store);
-      return {
-        ...store,
-        dispatch
-      };
-    }],
+    extraEnhancers: [
+      (createStore: any) => (reducer: any, preloadedState: any, enhancer: any) => {
+        const store = createStore(reducer, preloadedState, enhancer);
+        const dispatch = store.dispatch;
+        odux.setReduxStore(store);
+        return {
+          ...store,
+          dispatch,
+        };
+      },
+    ],
     onReducer: (reducer: any) => {
       return combineReducer(odux, reducer);
-    }
+    },
   };
 }

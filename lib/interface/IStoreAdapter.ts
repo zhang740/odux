@@ -2,7 +2,7 @@ import { IStore } from './IStore';
 
 export abstract class IStoreAdapter {
   /** 注册Store */
-  abstract registerStore: (store: IStore<any>) => void;
+  abstract registerStore: (store: IStore) => void;
 
   /** 获取仓储数据，undefined时为{} */
   abstract getStoreData<T>(storeName?: string, initial?: any): T;
