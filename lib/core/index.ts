@@ -1,3 +1,4 @@
 export * from './Odux';
 export * from './OduxConfig';
-export { ChangeDispatch, ChangeEvent } from './ChangeDispatch';
+export { ReduxListener, ReduxChangeEvent } from './ReduxListener';
+export { BaseStore } from './BaseStore';

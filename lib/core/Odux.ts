@@ -1,71 +1,72 @@
 import * as Redux from 'redux';
 import { IocContext } from 'power-di';
 import { isClass } from 'power-di/utils';
-import { EventBus } from '../event';
-import { SpyEvent, SpyEventType } from './SpyEvent';
-import { ProxyObject } from './ProxyObject';
-import { guard, commonForEach, shallowCopy, getPath } from '../utils';
-import { IStoreAdapter, IStore } from '../interface';
-import { TrackingData, ChangeTrackData } from './TrackingData';
+import { EventBus, StoreChangeEvent } from '../event';
+import { guard } from '../utils';
 import { OduxConfig } from './OduxConfig';
-import { BaseStore } from '../store/BaseStore';
-import { ChangeDispatch } from './ChangeDispatch';
+import { BaseStore } from './BaseStore';
+import { Debug } from '../utils';
+import { produce } from 'immer';
+import { ReduxListener, ReduxChangeEvent } from './ReduxListener';
+import { compare } from '../utils';
+import { shallowEqual } from '../utils';
+
+const getUid = (function() {
+  let id = 0;
+  return () => id++;
+})();
+
+interface ChangeData {
+  storeKey: string;
+  paths: string[];
+  newValue: any;
+}
 
 export interface ActionType extends Redux.Action {
-  data: ChangeTrackData[];
+  data: ChangeData[];
 }
 
-interface MetadataType {
-  values: { [key: string]: ProxyObject };
-}
-
-export class Odux implements IStoreAdapter {
+export class Odux {
   private static get REDUX_ACTION_TYPE() {
     return '$$Odux';
-  }
-  private static get exemptPrefix() {
-    return '__ODUX__';
   }
 
   private get ioc() {
     return this.config.iocContext;
   }
-  private reduxStore: Redux.Store<any>;
   private eventBus: EventBus;
-  private changeDispatch: ChangeDispatch;
+  private changeDispatch: ReduxListener;
+  private debug: Debug = new Debug();
 
-  private isInited = false;
-  private isReducing = false;
+  private reduxStore: Redux.Store<any>;
+  private localStore: {
+    [key: string]: {
+      paths: string[];
+      value: any;
+      draft: any;
+      inProduce: boolean;
+    };
+  } = {};
+
   private dispatchTimer: any;
-  private storeKeys: string[] = [];
-  private trackingData = new TrackingData();
+  private isTracking = 0;
 
   constructor(private config?: OduxConfig) {
-    this.config = {
+    this.config = config = {
       ...new OduxConfig(),
       ...(this.config || {}),
     };
 
     if (!config.iocContext) {
-      this.console.warn('no iocContext in config, use IocContext.DefaultInstance.');
+      this.debug.warn('no iocContext in config, use IocContext.DefaultInstance.');
       config.iocContext = IocContext.DefaultInstance;
     }
 
     // register to iocContext
     if (config.iocContext.get(Odux)) {
-      this.console.warn(
-        'is already has [Odux] in IocContext, this new instance CANNOT register in IocContext with [Odux].'
-      );
+      this.debug.warn('is already has [Odux] in IocContext, this new instance CANNOT register.');
     } else {
       config.iocContext.register(this, Odux);
-    }
-
-    if (config.iocContext.get(IStoreAdapter)) {
-      this.console.warn(
-        'is already has [IStoreAdapter] in IocContext, this new instance CANNOT register in IocContext with [IStoreAdapter].'
-      );
-    } else {
-      config.iocContext.register(this, IStoreAdapter);
     }
 
     // configure event bus
@@ -74,470 +75,176 @@ export class Odux implements IStoreAdapter {
       this.eventBus = new EventBus();
       this.ioc.register(this.eventBus, EventBus);
     }
-    this.eventBus.addEventListener(SpyEvent, this.spyEventHandler);
-    this.changeDispatch = new ChangeDispatch(this.eventBus);
+    this.changeDispatch = new ReduxListener(this.eventBus);
+    this.eventBus.addListener(ReduxChangeEvent, this.storeChangeListener);
+    this.debug.isDebug = this.config.isDebug;
   }
 
-  private get console() {
-    const hasGroup = !!console.group;
-    const thisConsole = {
-      log: (...msg: any[]) => {
-        if (hasGroup) console.log.apply(console, msg);
-      },
-      info: (...msg: any[]) => {
-        if (hasGroup) console.info.apply(console, msg);
-      },
-      warn: console.warn,
-      error: console.error,
-      group: (msg: string) => {
-        if (console.group) console.group(msg);
-      },
-      groupCollapsed: (msg: string) => {
-        if (console.groupCollapsed) console.groupCollapsed(msg);
-      },
-      groupEnd: () => {
-        if (console.groupEnd) console.groupEnd();
-      },
-    };
-    const noConsole = {
-      log: () => {},
-      info: () => {},
-      warn: console.warn,
-      error: console.error,
-      group: () => {},
-      groupCollapsed: () => {},
-      groupEnd: () => {},
-    };
-    return this.config._isDebug ? thisConsole : noConsole;
+  public dispose() {
+    this.changeDispatch.unsubscribeReduxStore();
   }
 
-  dispose() {
-    this.eventBus.removeEventListener(SpyEvent, this.spyEventHandler);
-  }
-
-  setReduxStore(store: Redux.Store<any>): Odux {
+  public setReduxStore(store: Redux.Store<any>): Odux {
     this.reduxStore = store;
     this.changeDispatch.change(store);
     return this;
   }
 
-  getReduxStore() {
+  public getReduxStore() {
     return this.reduxStore;
   }
 
-  /**
-   * init stores
-   * @param StoreTypes typeof BaseStore[]
-   */
   public initStores(StoreTypes?: any[]) {
     const ioc = this.ioc;
     if (!StoreTypes) {
-      StoreTypes = ioc.getSubClasses<typeof BaseStore>(BaseStore);
+      StoreTypes = ioc.getSubClasses<typeof BaseStore>(BaseStore) || [];
     }
-    StoreTypes &&
-      StoreTypes.forEach((StoreType: typeof BaseStore) => {
-        if (isClass(StoreType)) {
-          ioc.replace(StoreType, new StoreType(this));
-        }
-      });
-  }
-
-  public registerStore(store: IStore, ignoreDuplicate = false) {
-    const name = store.storeAliasName || store.type;
-    if (this.storeKeys.indexOf(name) >= 0) {
-      if (!ignoreDuplicate) {
-        throw new Error(`already has the same store. ${name}`);
-      } else {
-        this.console.info(`already has the same store. ${name}`);
+    StoreTypes.forEach((StoreType: typeof BaseStore) => {
+      if (isClass(StoreType)) {
+        ioc.replace(StoreType, new StoreType(this));
       }
-    } else {
-      this.storeKeys.push(name);
-    }
-  }
-
-  public setPrefix(prefix: string): Odux {
-    this.config.prefix = prefix;
-    return this;
-  }
-
-  public getStoreData<T = any>(storeName?: string, initial: any = {}): T {
-    const store = this.reduxStore;
-    if (!store) {
-      throw new Error('ReduxStore not ready');
-    }
-    // TODO tracking时加缓存优化
-    let state = store.getState();
-    if (this.config.prefix) {
-      this.config.prefix.split('.').forEach(name => {
-        state = state[name] = state[name] || {};
-      });
-    }
-    if (storeName) {
-      if (!state[storeName]) {
-        this.console.info('Init Store...', storeName);
-        this.directWriteChange(() => (state[storeName] = initial));
-      }
-      return state[storeName];
-    }
-    return state;
-  }
-
-  public getDataByPath(path: string, store = this.getStoreData()): any {
-    path.split('.').forEach(name => {
-      if (!store || !name) return;
-      store = store[name];
     });
-    return store;
   }
 
-  public initTracker() {
-    if (!this.isInited) {
-      this.createDataProxy(this.getStoreData());
-      this.isInited = true;
+  public registerStorePath(storePath: string[], oldStoreKey?: string) {
+    if (oldStoreKey) {
+      delete this.localStore[oldStoreKey];
     }
+    let storeKey = storePath.join('.');
+    storeKey = this.localStore[storeKey] ? `${storeKey}_${getUid()}` : storeKey;
+    this.localStore[storeKey] = {
+      paths: storePath,
+      value: {},
+      draft: undefined,
+      inProduce: false,
+    };
+    this.debug.log('[registerStorePath]', storePath, storeKey, oldStoreKey);
+    return storeKey;
+  }
+
+  public getStoreData<T = any>(storeKey: string): T {
+    if (!this.localStore[storeKey]) {
+      throw new Error(`No Store Register: [${storeKey}]`);
+    }
+    const store = this.localStore[storeKey];
+    return store.draft || store.value;
   }
 
   public transactionBegin() {
-    if (this.trackingData.isTracking) {
-      this.console.log('is Already in tracking.[Begin]');
-    }
-    this.console.groupCollapsed('Data Change Tracking...');
-    this.initTracker();
-    this.trackingData.isTracking++;
+    this.debug.log('[transactionBegin]', this.isTracking);
+    this.isTracking++;
   }
 
-  public transactionChange(func: () => void, err?: (data: Error) => void) {
+  public transactionChange(storeKey: string, func: () => void, err?: (data: Error) => void) {
     this.transactionBegin();
-    guard(func, undefined, error => {
-      if (this.config._isDebug) {
-        this.console.warn('transactionChange error', error);
-      }
-      err && err(error);
-    });
-    this.transactionEnd();
-  }
+    this.debug.log('[transactionChange]', storeKey);
+    const state = this.getStoreData(storeKey);
 
-  public directWriteChange(func: () => void, err?: (data: Error) => void) {
-    const oldWriteTrackingStatus = this.trackingData.isDirectWriting;
-    this.trackingData.isDirectWriting = true;
-    guard(func, undefined, error => {
-      if (this.config._isDebug) {
-        this.console.warn('directWriteChange error', error);
+    guard(
+      () => {
+        this.debug.log('[before draft]', storeKey, state);
+        const store = this.localStore[storeKey];
+        if (store.inProduce) {
+          func();
+        } else {
+          store.draft = produce(state, draft => {
+            store.inProduce = true;
+            store.draft = draft;
+            func();
+            this.debug.log('[in draft]', storeKey, draft);
+          });
+          store.inProduce = false;
+          if (shallowEqual(store.value, store.draft)) {
+            store.draft = undefined;
+          }
+        }
+        this.debug.log('[after draft]', storeKey, store.draft);
+      },
+      undefined,
+      error => {
+        this.debug.error('transactionChange error', error);
+        err && err(error);
       }
-      err && err(error);
-    });
-    !this.isReducing && this.checkNewProps();
-    this.trackingData.isDirectWriting = oldWriteTrackingStatus;
+    );
+    this.transactionEnd();
   }
 
   /** 结束跟踪 */
   public transactionEnd() {
-    if (!this.trackingData.isTracking) {
-      this.console.warn('is NOT in tracking.[End]');
-      this.console.groupEnd();
-      return;
+    this.isTracking--;
+    this.debug.log('[transactionEnd]', this.isTracking);
+    if (this.isTracking === 0) {
+      this.dispatchChange();
     }
-    this.trackingData.isTracking--;
-    if (this.trackingData.isTracking) {
-      this.console.info('is Already in tracking.[End]');
-      this.console.groupEnd();
-      return;
-    }
-    this.console.info('Tracking ending...');
-    const storeData = this.getStoreData();
-    this.createDataProxy(storeData, '', false);
-
-    // TODO 优化
-    this.checkNewProps(storeData);
-    if (this.trackingData.changeTracking.length > 0) {
-      this.dispatchChange(this.trackingData.changeTracking);
-      this.trackingData.changeTracking = [];
-    }
-    this.console.groupEnd();
   }
 
   public mainReducer(state: any, action: ActionType) {
-    this.isReducing = true;
+    const newState = { ...(state || {}) };
     if (!state) {
-      state = {};
-      this.storeKeys.forEach(key => {
-        state[key] = undefined;
+      Object.keys(this.localStore).forEach(key => {
+        const store = this.localStore[key];
+        this.setValue(newState, store.paths, store.value);
       });
-      this.createDataProxy(state);
     }
     if (action.type !== Odux.REDUX_ACTION_TYPE) {
-      return state;
+      return newState;
     }
-    let newState: any = shallowCopy(state);
-    this.directWriteChange(() => {
-      if (this.config._isDebug) {
-        this.console.groupCollapsed('mainReducer');
-        this.console.log('action:', action);
-        action.data.forEach(change => {
-          this.console.log(change.parentPath, change.key, change._source, typeof change.newValue);
-        });
-        this.console.groupEnd();
-      }
-
-      let copyNew: string[] = [];
-      let copyNewObject: { [key: string]: any } = {};
-      let data: any = newState;
-      let oldLastData: any;
-      // TODO 待优化
-      action.data.forEach(change => {
-        let path = '';
-        change.parentPath &&
-          change.parentPath.split('.').forEach(name => {
-            if (!data) {
-              return;
-            }
-            if (!name) {
-              this.console.warn('no name:', path, change.parentPath, change.key);
-              return;
-            }
-            if (!data.hasOwnProperty(name)) {
-              this.console.info(`no object:key:${name} path:${path} change:`, change);
-              return;
-            }
-
-            const fullPath = getPath(path, name);
-            oldLastData = data[name];
-            if (copyNew.indexOf(fullPath) < 0) {
-              copyNew.push(fullPath);
-              this.console.info('shallow copy: ', fullPath);
-              if (this.isObject(oldLastData)) {
-                // TODO 多路径同步更新
-                data[name] = shallowCopy(oldLastData);
-
-                copyNewObject[fullPath] = data[name];
-              } else {
-                this.console.warn(
-                  'shallow copy fail.',
-                  fullPath,
-                  change.parentPath,
-                  typeof oldLastData
-                );
-                this.console.log(change);
-                data = {};
-              }
-            }
-            data = data[name];
-            path = fullPath;
-          });
-        if (path === change.parentPath && data) {
-          switch (change.type) {
-            case 'New':
-            case 'Update':
-              if (oldLastData !== data && oldLastData[change.key] !== change.oldValue) {
-                this.console.log('[restore oldValue]:', path, change.key);
-                this.recoverData(oldLastData, change.oldValue, change.key);
-              }
-              if (data[change.key] !== change.newValue) {
-                this.console.log('[assign newValue]:', path, change.key);
-                data[(change.key = change.newValue)];
-              }
-              this.createDataProxy(change.newValue, change.fullPath, true);
-              break;
-          }
-        }
-        data = newState;
-      });
-
-      this.console.log('new object createDataProxy...');
-      copyNew.forEach(newPath => {
-        this.createDataProxy(copyNewObject[newPath], newPath, false);
-      });
-
-      this.createDataProxy(newState, '', false);
-      // if (this.config._isDebug) {
-      // compare.call(this, state, newState, '')
-      // }
-      this.console.info('[Return]newState');
+    this.debug.log('[mainReducer]', action);
+    action.data.forEach(change => {
+      this.setValue(newState, change.paths, change.newValue);
     });
-    this.isReducing = false;
+
+    if (this.config.isDebug) {
+      compare(state, newState, '');
+    }
     return newState;
   }
 
-  private spyEventHandler = (evt: SpyEvent) => {
-    this.handleSpyEvent(evt.message);
-  }
-
-  private recoverData(data: any, value: any, key: string) {
-    Object.defineProperty(data, key, {
-      enumerable: true,
-      configurable: true,
-      value: value,
-    });
-  }
-
-  private handleSpyEvent(event: SpyEventType) {
-    const { isTracking, isDirectWriting, readTracking, addChangeTracking } = this.trackingData;
-
-    switch (event.type) {
-      case 'Update':
-        if (event.newValue === event.oldValue) {
-          this.console.log('Data No Change(ignore): ', event.fullPath);
-          return;
-        }
-        if (isTracking) {
-          this.console.log('Write Tracking(recording): ', event.fullPath);
-          (event as ChangeTrackData)._source = 'Update_recording_SpyEvent';
-          addChangeTracking(event);
-          Object.keys(readTracking)
-            .filter(path => path.indexOf(event.fullPath) === 0 && path !== event.fullPath)
-            .forEach(path => {
-              delete readTracking[path];
-            });
-        } else if (!isDirectWriting) {
-          if (!this.config.autoTracking) {
-            throw new Error('CANNOT modify data without tracking when autoTracking is FALSE.');
-          }
-          this.console.log('Write Tracking(dispatch): ', event.fullPath);
-          (event as ChangeTrackData)._source = 'Update_dispatch_SpyEvent';
-          this.dispatchChange([event]);
-        }
-        break;
-
-      case 'Read':
-        if ((isTracking || isDirectWriting) && this.isObject(event.newValue)) {
-          (event as ChangeTrackData)._source = 'Read_SpyEvent';
-          readTracking[event.fullPath] = {
-            value: event,
-          };
-        }
-        break;
-    }
-  }
-
-  private checkNewProps(storeData = this.getStoreData()) {
-    const { addChangeTracking, changeTracking, readTracking } = this.trackingData;
-
-    const readTrackingPaths = Object.keys(readTracking);
-    this.console.info('readTrackingPaths...', readTrackingPaths.length);
-    readTrackingPaths.forEach(path => {
-      let data = this.getDataByPath(path, storeData);
-      this.console.log('[check]:', path, 'hasData:', !!data);
-      if (!data) {
-        const event = readTracking[path].value;
-        addChangeTracking(event);
-      } else if (this.isObject(data)) {
-        this.console.groupCollapsed('checkNewProps... ' + path);
-        if (this.isObject(data)) {
-          if (!this.getMeta(data)) {
-            this.createDataProxy(data);
-          }
-          commonForEach(data, (key: any) => {
-            const fullPath = getPath(path, key);
-            const meta = this.getMeta(data);
-            let hasNewProps = meta && !meta.values[key];
-            if (hasNewProps) {
-              this.console.log('[new props]: ', fullPath);
-              let change = changeTracking.find((item: any) => item.fullPath === fullPath);
-              if (change) {
-                change.newValue = data[key];
-                change._source = 'checkNewProps(change)';
-              } else {
-                change = {
-                  key: key,
-                  type: 'New',
-                  newValue: data[key],
-                  parentObject: data,
-                  parentPath: path,
-                  fullPath: fullPath,
-                  _source: 'checkNewProps(read)',
-                };
-                addChangeTracking(change);
-              }
-              this.createDataProxy(data[key], fullPath);
-              this.setProxyProperty(data, key, path);
-            }
-          });
-        }
-        this.console.groupEnd();
+  private setValue(state: any, paths: string[], value: any) {
+    const prefix = [...paths];
+    const name = prefix.pop();
+    prefix.forEach(k => {
+      if (!state[k]) {
+        state[k] = {};
       }
+      state[k] = { ...state[k] };
+      state = state[k];
     });
-    this.trackingData.readTracking = {};
+    state[name] = value;
   }
 
-  private createDataProxy(data: any, path = '', deep = true, cycleCheckStartId = -1) {
-    if (!this.isObject(data)) {
-      return;
-    }
+  private storeChangeListener = (evt: ReduxChangeEvent) => {
+    const state = evt.data;
+    this.debug.log('[storeChangeListener]', state);
+    const changedStore: { storeKey: string; value: any }[] = [];
 
-    this.console.groupCollapsed('createDataProxy，Deep: ' + deep + ' ' + path);
-
-    commonForEach(data, (key: any) => {
-      const fullPath = getPath(path, key);
-      this.console.log(fullPath);
-
-      // TODO 检测循环引用
-      this.setProxyProperty(data, key, path);
-
-      if (deep && this.isObject(data[key]) && key !== Odux.exemptPrefix) {
-        this.createDataProxy(data[key], fullPath, deep, cycleCheckStartId);
-      }
-    });
-    this.console.groupEnd();
-  }
-
-  private setProxyProperty(proxyObject: any, key: string, dataPath: string) {
-    if (!this.isObject(proxyObject) || !key || key === Odux.exemptPrefix) {
-      return;
-    }
-
-    let meta = this.getMeta(proxyObject);
-    if (!meta) {
-      meta = this.setMeta(proxyObject);
-    }
-    if (proxyObject[key] instanceof ProxyObject) {
-      meta.values[key] = proxyObject[key];
-    } else {
-      const fullPath = getPath(dataPath, key);
-      if (this.isObject(proxyObject[key])) {
-        this.setMeta(proxyObject[key]);
-      }
-      meta.values[key] = new ProxyObject(
-        this.eventBus,
-        this.config,
-        this.trackingData,
-        proxyObject,
-        proxyObject[key],
-        key,
-        dataPath,
-        fullPath
-      );
-    }
-
-    const self = this;
-    Object.defineProperty(proxyObject, key, {
-      configurable: true,
-      enumerable: true,
-      get: function() {
-        const values = self.getMeta(this).values;
-        if (!values[key]) {
-          this.console.warn('no value get', key, values);
-          return undefined;
+    Object.keys(this.localStore).forEach(k => {
+      const storePath = this.localStore[k].paths;
+      try {
+        const store = this.localStore[k];
+        const newValue = storePath.reduce((s, k) => s[k], state);
+        if (!shallowEqual(store.value, newValue)) {
+          changedStore.push({ storeKey: k, value: newValue });
+          store.value = newValue;
         }
-        return values[key].get();
-      },
-      set: function(value) {
-        const values = self.getMeta(this).values;
-        if (!values[key]) {
-          this.console.warn('no value set', key, values);
-          return;
-        }
-        values[key].set(value);
-      },
+      } catch (error) {
+        this.debug.info(
+          '[storeChangeListener] store: [',
+          storePath.join('.'),
+          '] not exist.',
+          error
+        );
+      }
+      this.eventBus.emitComponentEvent(new StoreChangeEvent(changedStore));
     });
   }
 
-  private dispatchChange(changes: ChangeTrackData[]) {
+  private dispatchChange() {
+    this.debug.log('[dispatchChange]', !!this.dispatchTimer);
     if (this.dispatchTimer) {
-      this.trackingData.changeDatas = this.trackingData.changeDatas.concat(changes);
       return;
-    } else {
-      this.trackingData.changeDatas = changes;
     }
+
     if (this.config.dispatchDelay === -1) {
       this.dispatchAction();
     } else {
@@ -549,37 +256,44 @@ export class Odux implements IStoreAdapter {
   }
 
   private dispatchAction() {
-    this.console.groupCollapsed('Changes Dispatching...' + this.trackingData.changeDatas.length);
-    if (!this.reduxStore) {
-      this.console.warn('NO [reduxStore], cancel dispatch action.');
-    } else {
-      this.reduxStore.dispatch({
-        type: Odux.REDUX_ACTION_TYPE,
-        data: this.trackingData.changeDatas,
-      } as ActionType);
-    }
-    this.trackingData.changeDatas = [];
-    this.console.groupEnd();
-  }
-
-  private isObject(data: any) {
-    return data !== null && typeof data === 'object';
-  }
-
-  private setMeta(data: any, meta: MetadataType = { values: {} }) {
-    if (data && this.isObject(data) && !data[Odux.exemptPrefix]) {
-      Object.defineProperty(data, Odux.exemptPrefix, {
-        enumerable: false,
-        writable: false,
-        configurable: true,
-        value: meta || ({ values: {} } as MetadataType),
+    const storeKeys = Object.keys(this.localStore);
+    const changes = storeKeys
+      .filter(k => {
+        const store = this.localStore[k];
+        return store.draft && !shallowEqual(store.value, store.draft);
+      })
+      .map(k => {
+        const store = this.localStore[k];
+        const data = {
+          storeKey: k,
+          paths: store.paths,
+          newValue: store.draft,
+        } as ChangeData;
+        store.draft = undefined;
+        return data;
       });
+    this.debug.log('[dispatchAction]', changes);
+    if (changes.length) {
+      if (this.reduxStore) {
+        this.reduxStore.dispatch({
+          type: Odux.REDUX_ACTION_TYPE,
+          data: changes,
+        } as ActionType);
+      } else {
+        changes.forEach(change => {
+          this.localStore[change.storeKey].value = change.newValue;
+        });
+        this.eventBus.emitComponentEvent(
+          new StoreChangeEvent(
+            changes.map(change => {
+              return {
+                storeKey: change.storeKey,
+                value: change.newValue,
+              };
+            })
+          )
+        );
+      }
     }
-    return data && data[Odux.exemptPrefix];
-  }
-
-  private getMeta(data: any): MetadataType {
-    const meta = !!data && (data as any)[Odux.exemptPrefix];
-    return meta;
   }
 }

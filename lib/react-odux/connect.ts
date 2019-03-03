@@ -2,10 +2,11 @@ import * as React from 'react';
 import * as PropTypes from 'prop-types';
 import { IocContext } from 'power-di';
 import { getGlobalType } from 'power-di/utils';
-import { EventBus } from '../event';
-import { ChangeEvent } from '../core';
+import { EventBus, StoreChangeEvent } from '../event';
 import { shallowEqual } from '../utils';
 import { getMetadata, PropsKeySymbol } from '../helper/helper';
+import { BaseStore } from '../core';
+import { getStoreMeta } from '../core/BaseStore';
 
 export type MapToProps<OwnPropsType, MapperPropsType> = (
   state: any,
@@ -21,6 +22,8 @@ export function connect<OwnPropsType, MapperPropsType>(
   mapper?: MapToProps<OwnPropsType, MapperPropsType>
 ) {
   return function(target: any) {
+    let storeKeys: string[] = [];
+
     const propsMapper: MapToProps<OwnPropsType, MapperPropsType> = (state, ownProps, ioc) => {
       let mapperProps = {};
       if (mapper) {
@@ -31,14 +34,22 @@ export function connect<OwnPropsType, MapperPropsType>(
       const connect = getMetadata(target).connect;
       if (connect) {
         for (const key in connect) {
-          bindData[key] = connect[key](ioc);
+          const data = (bindData[key] = connect[key](ioc));
+
+          // TODO 支持计算表达式解析store
+          if (storeKeys) {
+            if (data instanceof BaseStore) {
+              storeKeys.push(getStoreMeta(data).adapter.StoreKey);
+            } else {
+              storeKeys = undefined;
+            }
+          }
         }
       }
       return {
         ...(ownProps || {}),
         ...mapperProps,
         [PropsKeySymbol]: bindData,
-        _debug: bindData,
       } as any;
     };
 
@@ -51,6 +62,7 @@ export function connect<OwnPropsType, MapperPropsType>(
       ioc: IocContext;
       eventBus: EventBus;
       needUpdate = true;
+      cId: string;
 
       constructor(props: OwnPropsType, context: any) {
         super(props, context);
@@ -60,15 +72,16 @@ export function connect<OwnPropsType, MapperPropsType>(
         this.state = { data: propsMapper(this.state, props, this.ioc) };
       }
 
-      onReduxChange = (evt: ChangeEvent) => {
+      onStoreChange = (evt: StoreChangeEvent) => {
         this.checkStateChange();
       }
 
       componentDidMount() {
-        this.eventBus.addEventListener(ChangeEvent, this.onReduxChange);
+        this.cId = this.eventBus.setComponentListener(undefined, this.onStoreChange, storeKeys);
       }
+
       componentWillUnmount() {
-        this.eventBus.removeEventListener(ChangeEvent, this.onReduxChange);
+        this.eventBus.setComponentListener(this.cId);
       }
 
       componentWillReceiveProps(nextProps: Readonly<OwnPropsType>, nextContext: any) {

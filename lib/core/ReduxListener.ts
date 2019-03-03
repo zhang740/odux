@@ -1,19 +1,13 @@
-import { IocContext } from 'power-di';
-import { BaseEvent, EventBus } from '../event';
-import { Odux } from '../core';
+import { EventBus, BaseEvent } from '../event';
 import { Unsubscribe, Store } from 'redux';
 
-export class ChangeEvent extends BaseEvent<any> {
-}
+export class ReduxChangeEvent extends BaseEvent<any> {}
 
-export class ChangeDispatch {
+export class ReduxListener {
   private unsubscribe: Unsubscribe;
   private store: Store<any>;
 
-  constructor(
-    private eventBus: EventBus,
-  ) {
-  }
+  constructor(private eventBus: EventBus) {}
 
   subscribeReduxStore(store: Store<any>) {
     this.unsubscribe = store.subscribe(this.listener);
@@ -30,6 +24,6 @@ export class ChangeDispatch {
   }
 
   listener = () => {
-    this.eventBus.emit(new ChangeEvent(this.store.getState()));
+    this.eventBus.emit(new ReduxChangeEvent(this.store.getState()));
   }
 }

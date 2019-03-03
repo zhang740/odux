@@ -1,7 +1,7 @@
 import test from 'ava';
 import * as React from 'react';
 import * as render from 'react-test-renderer';
-import { BaseStore, inject, createOduxAIO, IStoreAdapter } from '../../lib';
+import { BaseStore, inject, createOduxAIO, Odux } from '../../lib';
 import { connect } from '../../lib/react-odux';
 import { IocContext } from 'power-di';
 import { IocProvider } from 'power-di/react';
@@ -11,7 +11,7 @@ test.beforeEach('init ioc', t => {
 });
 
 test('react component connect.', t => {
-  IocContext.DefaultInstance.replace(IStoreAdapter, createOduxAIO());
+  IocContext.DefaultInstance.replace(Odux, createOduxAIO());
 
   class AStore extends BaseStore {
     testData: { str: string };
@@ -36,7 +36,7 @@ test('react component connect.', t => {
 
 test('react component connect props merge.', t => {
   const iocContext = new IocContext({ autoRegister: true });
-  iocContext.replace(IStoreAdapter, createOduxAIO({ iocContext }));
+  iocContext.replace(Odux, createOduxAIO({ iocContext }));
 
   class AStore extends BaseStore {
     testData: { str: string } = { str: 'TEST_DATA' };
@@ -67,4 +67,39 @@ test('react component connect props merge.', t => {
       <TestComponent test="123123" />
     </IocProvider>
   );
+});
+
+test('data change.', t => {
+  return new Promise(resolve => {
+    IocContext.DefaultInstance.replace(Odux, createOduxAIO());
+
+    class AStore extends BaseStore {
+      testData: { str: string };
+    }
+
+    @connect()
+    class TestComponent extends React.PureComponent {
+      @inject()
+      aStore: AStore;
+
+      componentWillMount() {
+        setImmediate(() => {
+          this.aStore.changeData(() => {
+            this.aStore.testData = { str: '3333' };
+          });
+        });
+      }
+
+      componentWillReceiveProps() {
+        t.true(this.aStore.testData.str === '3333');
+        resolve();
+      }
+
+      render(): any {
+        return null;
+      }
+    }
+
+    render.create(<TestComponent />);
+  });
 });

@@ -1,7 +1,6 @@
 import test from 'ava';
 import { BaseStore, Odux } from '../lib';
 import { IocContext } from 'power-di';
-import { createStore, applyMiddleware, compose } from 'redux';
 
 interface TestObject {
   num?: number;
@@ -12,14 +11,10 @@ class TestStore extends BaseStore {
   test: string;
 }
 
-let defaultOdux: Odux, store: any, testStore: TestStore;
+let defaultOdux: Odux, testStore: TestStore;
 
 test.beforeEach('init Odux', t => {
   defaultOdux = new Odux({ dispatchDelay: -1, iocContext: new IocContext(), isDebug: false });
-  const finalCreateStore: any = compose(applyMiddleware(...[]))(createStore);
-  const rootReducer = defaultOdux.mainReducer.bind(defaultOdux);
-  store = finalCreateStore(rootReducer);
-  defaultOdux.setReduxStore(store);
   testStore = new TestStore(defaultOdux);
 });
 
@@ -61,8 +56,6 @@ test('prefix.', t => {
   store.data = { a: 123 };
 
   t.true(store.data.a === 123);
-  const state = defaultOdux.getReduxStore().getState();
-  t.deepEqual(state, { a: { PrefixTest: { data: { a: 123 } } } });
 });
 
 test('name.', t => {
@@ -75,8 +68,6 @@ test('name.', t => {
   store.data = { a: 123 };
 
   t.true(store.data.a === 123);
-  const state = defaultOdux.getReduxStore().getState();
-  t.deepEqual(state, { xxx: { data: { a: 123 } } });
 });
 
 test('props default value.', t => {
