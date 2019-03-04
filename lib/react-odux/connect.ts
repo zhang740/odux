@@ -74,7 +74,7 @@ export function connect<OwnPropsType, MapperPropsType>(
           console.warn(
             `NOTFOUND odux at iocContext (or default instance of ioc), will auto create one with 'new Odux();' on ioc.`
           );
-          new Odux({ iocContext: this.ioc });
+          this.odux = new Odux({ iocContext: this.ioc });
         }
         const store = this.odux.getReduxStore();
         this.state = {
