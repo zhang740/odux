@@ -114,7 +114,6 @@ test('mapper.', t => {
   }
 
   const aStore = new AStore(odux);
-  odux.getStore(AStore);
   aStore.testData = { str: '111' };
 
   @connect((s, p, ioc) => {
@@ -138,4 +137,41 @@ test('mapper.', t => {
   }
 
   render.create(<TestComponent test="333" />);
+});
+
+test('applyChange.', t => {
+  const odux = createOduxAIO({ dispatchDelay: -1 });
+  IocContext.DefaultInstance.replace(Odux, odux);
+
+  class AStore extends BaseStore {
+    testData = { a: 1 };
+
+    change() {
+      this.testData.a = 2;
+      this.applyChange();
+      this.testData.a = 3;
+      this.testData.a = 4;
+      this.applyChange();
+      this.testData.a = 5;
+    }
+  }
+
+  const results = [1, 2, 4, 5];
+
+  @connect()
+  class TestComponent extends React.PureComponent {
+    @inject()
+    aStore: AStore;
+
+    componentDidMount() {
+      this.aStore.change();
+    }
+
+    render(): any {
+      t.true(this.aStore.testData.a === results.shift());
+      return null;
+    }
+  }
+
+  render.create(<TestComponent />);
 });

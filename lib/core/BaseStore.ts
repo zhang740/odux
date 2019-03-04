@@ -26,6 +26,7 @@ export class BaseStore {
     MetaSymbol,
     '$aliasName',
     '$prefix',
+    'applyChange',
     ...Object.getOwnPropertyNames(Object),
   ];
 
@@ -88,5 +89,11 @@ export class BaseStore {
   /** 数据变更方法，推荐把业务逻辑封装在 Store 上独立的方法内 */
   changeData(func: () => void) {
     func();
+  }
+
+  /** apply change immediately */
+  applyChange() {
+    const meta = getStoreMeta(this);
+    meta.adapter.applyChange();
   }
 }

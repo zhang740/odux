@@ -42,6 +42,11 @@ export class StoreAdapter {
     };
   }
 
+  /** apply change immediately */
+  public applyChange() {
+    this.odux.applyChange([this.storeKey]);
+  }
+
   private get storePath() {
     return []
       .concat(this.prefix || [])

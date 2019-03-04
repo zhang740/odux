@@ -208,6 +208,22 @@ export class Odux {
     }
   }
 
+  public applyChange(storeKeys: string[]) {
+    storeKeys
+      .filter(k => this.localStore[k].inProduce)
+      .forEach(k => {
+        const store = this.localStore[k];
+        store.draft = finishDraft(store.draft);
+      });
+    this.dispatchAction(storeKeys);
+    storeKeys
+      .filter(k => this.localStore[k].inProduce)
+      .forEach(k => {
+        const store = this.localStore[k];
+        store.draft = createDraft(store.value);
+      });
+  }
+
   public mainReducer(state: any, action: ActionType) {
     const newState = { ...(state || {}) };
     if (!state) {
@@ -285,8 +301,8 @@ export class Odux {
     }
   }
 
-  private dispatchAction() {
-    const storeKeys = Object.keys(this.localStore);
+  private dispatchAction(storeKeys?: string[]) {
+    storeKeys = storeKeys || Object.keys(this.localStore);
     const changes = storeKeys
       .filter(k => {
         const store = this.localStore[k];
