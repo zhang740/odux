@@ -114,7 +114,9 @@ export class Odux {
     storeKey = this.localStore[storeKey] ? `${storeKey}_${getUid()}` : storeKey;
     this.localStore[storeKey] = {
       paths: storePath,
-      value: {},
+      value: this.reduxStore
+        ? storePath.reduce((s, k) => s[k] || {}, this.reduxStore.getState())
+        : {},
       draft: undefined,
       inProduce: false,
     };
