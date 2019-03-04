@@ -5,7 +5,7 @@ import { getGlobalType } from 'power-di/utils';
 import { EventBus, StoreChangeEvent } from '../event';
 import { shallowEqual } from '../utils';
 import { getMetadata, PropsKeySymbol } from '../helper/helper';
-import { BaseStore } from '../core';
+import { BaseStore, Odux } from '../core';
 import { getStoreMeta } from '../core/BaseStore';
 
 export type MapToProps<OwnPropsType, MapperPropsType> = (
@@ -58,18 +58,22 @@ export function connect<OwnPropsType, MapperPropsType>(
         iocContext: PropTypes.any,
       };
       static displayName: string;
-
-      ioc: IocContext;
-      eventBus: EventBus;
-      needUpdate = true;
-      cId: string;
+      private ioc: IocContext;
+      private odux: Odux;
+      private eventBus: EventBus;
+      private needUpdate = true;
+      private cId: string;
 
       constructor(props: OwnPropsType, context: any) {
         super(props, context);
 
         this.ioc = context.iocContext || IocContext.DefaultInstance;
         this.eventBus = this.ioc.get(EventBus);
-        this.state = { data: propsMapper(this.state, props, this.ioc) };
+        this.odux = this.ioc.get(Odux);
+        const store = this.odux.getReduxStore();
+        this.state = {
+          data: propsMapper(store && store.getState(), props, this.ioc),
+        };
       }
 
       onStoreChange = (evt: StoreChangeEvent) => {
@@ -97,7 +101,8 @@ export function connect<OwnPropsType, MapperPropsType>(
       }
 
       checkStateChange(props = this.props) {
-        const newState = propsMapper(this.state, this.props, this.ioc);
+        const store = this.odux.getReduxStore();
+        const newState = propsMapper(store && store.getState(), this.props, this.ioc);
         this.needUpdate = !shallowEqual(this.state.data, newState);
         if (this.needUpdate) {
           this.setState({

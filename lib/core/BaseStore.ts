@@ -81,17 +81,7 @@ export class BaseStore {
 
     const meta = getStoreMeta(this);
     meta.adapter = new StoreAdapter(odux, type);
-
-    // defaultValue
-    setImmediate(() => {
-      meta.adapter.transactionChange(() => {
-        Object.keys(this).forEach(k => {
-          if (getDataType(this, k) === 'data') {
-            thisProxy[k] = this[k];
-          }
-        });
-      });
-    });
+    odux.registerStore(this);
     return thisProxy;
   }
 

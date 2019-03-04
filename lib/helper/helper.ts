@@ -39,6 +39,8 @@ export function inject<T extends ClassType>(
       config.getter ||
       (ioc => {
         const DataType = getClsTypeByDecorator(config.dataType, target, key);
+        console.log({ DataType }, ioc.has(DataType));
+
         if (!ioc.has(DataType)) {
           if (ioc.has(Odux)) {
             ioc.register(DataType);

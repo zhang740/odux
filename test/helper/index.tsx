@@ -5,6 +5,7 @@ import { BaseStore, inject, createOduxAIO, Odux } from '../../lib';
 import { connect } from '../../lib/react-odux';
 import { IocContext } from 'power-di';
 import { IocProvider } from 'power-di/react';
+import { getGlobalType } from 'power-di/utils';
 
 test.beforeEach('init ioc', t => {
   IocContext.DefaultInstance.clear();
@@ -102,4 +103,39 @@ test('data change.', t => {
 
     render.create(<TestComponent />);
   });
+});
+
+test('mapper.', t => {
+  const odux = createOduxAIO({ dispatchDelay: -1 });
+  IocContext.DefaultInstance.replace(Odux, odux);
+
+  class AStore extends BaseStore {
+    testData: { str: string };
+  }
+
+  const aStore = new AStore(odux);
+  odux.getStore(AStore);
+  aStore.testData = { str: '111' };
+
+  @connect((s, p, ioc) => {
+    t.deepEqual(s, {
+      [getGlobalType(AStore)]: {
+        testData: {
+          str: '111',
+        },
+      },
+    });
+    t.deepEqual(p, { test: '333' });
+    t.true(ioc.get(Odux) === odux);
+  })
+  class TestComponent extends React.PureComponent<{ test: string }> {
+    @inject()
+    aStore: AStore;
+
+    render(): any {
+      return null;
+    }
+  }
+
+  render.create(<TestComponent test="333" />);
 });

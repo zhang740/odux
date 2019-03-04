@@ -1,6 +1,6 @@
 import * as Redux from 'redux';
 import { IocContext } from 'power-di';
-import { isClass } from 'power-di/utils';
+import { isClass, getGlobalType } from 'power-di/utils';
 import { EventBus, StoreChangeEvent } from '../event';
 import { guard } from '../utils';
 import { OduxConfig } from './OduxConfig';
@@ -106,6 +106,18 @@ export class Odux {
     });
   }
 
+  public registerStore(store: BaseStore) {
+    const StoreType = store.constructor;
+    this.debug.log('[registerStore]', getGlobalType(StoreType));
+    if (!this.ioc.has(StoreType)) {
+      this.ioc.register(store, StoreType);
+    }
+  }
+
+  public getStore<T extends typeof BaseStore>(type: T) {
+    return this.ioc.get(type);
+  }
+
   public registerStorePath(storePath: string[], oldStoreKey?: string) {
     if (oldStoreKey) {
       delete this.localStore[oldStoreKey];
@@ -153,7 +165,6 @@ export class Odux {
             store.inProduce = true;
             store.draft = draft;
             func();
-            this.debug.log('[in draft]', storeKey, draft);
           });
           store.inProduce = false;
           if (shallowEqual(store.value, store.draft)) {
