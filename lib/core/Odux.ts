@@ -147,13 +147,9 @@ export class Odux {
     return store.draft || store.value;
   }
 
-  public transactionBegin() {
+  public transactionChange(storeKey: string, func: () => void, err?: (data: Error) => void) {
     this.debug.log('[transactionBegin]', this.isTracking);
     this.isTracking++;
-  }
-
-  public transactionChange(storeKey: string, func: () => void, err?: (data: Error) => void) {
-    this.transactionBegin();
     this.debug.log('[transactionChange]', storeKey);
     const state = this.getStoreData(storeKey);
 
@@ -169,7 +165,11 @@ export class Odux {
         }
       }
       this.debug.log('[after draft]', storeKey, store.draft);
-      this.transactionEnd();
+      this.isTracking--;
+      this.debug.log('[transactionEnd]', this.isTracking);
+      if (this.isTracking === 0) {
+        this.dispatchChange();
+      }
     };
 
     let storeFirstDraft = false;
@@ -205,14 +205,6 @@ export class Odux {
     } else {
       finish();
       return result;
-    }
-  }
-
-  public transactionEnd() {
-    this.isTracking--;
-    this.debug.log('[transactionEnd]', this.isTracking);
-    if (this.isTracking === 0) {
-      this.dispatchChange();
     }
   }
 

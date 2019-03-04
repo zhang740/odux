@@ -111,3 +111,14 @@ test('function return value.', async t => {
   t.true(c instanceof Promise);
   t.true((await c) === 'c');
 });
+
+test('dispatchDelay.', async t => {
+  const odux = new Odux({ dispatchDelay: 0 });
+  const testStore = new TestStore(odux);
+  testStore.a_object = { num: 123 };
+  t.true(testStore.a_object.num === 123);
+  testStore.changeData(() => {
+    testStore.a_object.num = 222;
+  });
+  t.true(testStore.a_object.num === 222);
+});
