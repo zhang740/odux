@@ -1,6 +1,6 @@
 {
   "name": "odux",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "observable redux",
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
@@ -52,7 +52,8 @@
     "@types/prop-types": "^15.5.9",
     "immer": "^2.1.0",
     "power-di": "^1.4.17",
-    "prop-types": "^15.7.2"
+    "prop-types": "^15.7.2",
+    "redux": "^4.0.1"
   },
   "devDependencies": {
     "@types/node": "^9.4.0",
@@ -70,7 +71,6 @@
     "nyc": "^11.4.1",
     "react": "^16.2.0",
     "react-test-renderer": "^16.2.0",
-    "redux": "^4.0.1",
     "rimraf": "^2.6.2",
     "ts-loader": "^3.3.1",
     "tslint": "^5.9.1",
