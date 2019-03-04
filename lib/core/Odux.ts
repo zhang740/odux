@@ -6,7 +6,7 @@ import { guard } from '../utils';
 import { OduxConfig } from './OduxConfig';
 import { BaseStore } from './BaseStore';
 import { Debug } from '../utils';
-import { produce, setAutoFreeze } from 'immer';
+import { createDraft, finishDraft, setAutoFreeze } from 'immer';
 import { ReduxListener, ReduxChangeEvent } from './ReduxListener';
 import { compare } from '../utils';
 import { shallowEqual } from '../utils';
@@ -157,24 +157,33 @@ export class Odux {
     this.debug.log('[transactionChange]', storeKey);
     const state = this.getStoreData(storeKey);
 
+    this.debug.log('[before draft]', storeKey, state);
+    const store = this.localStore[storeKey];
+
+    const finish = () => {
+      if (storeFirstDraft) {
+        store.inProduce = false;
+        store.draft = finishDraft(store.draft);
+        if (shallowEqual(store.value, store.draft)) {
+          store.draft = undefined;
+        }
+      }
+      this.debug.log('[after draft]', storeKey, store.draft);
+      this.transactionEnd();
+    };
+
+    let storeFirstDraft = false;
+
+    if (!store.inProduce) {
+      store.draft = createDraft(state);
+      store.inProduce = true;
+      storeFirstDraft = true;
+    }
+
+    let result: any;
     guard(
       () => {
-        this.debug.log('[before draft]', storeKey, state);
-        const store = this.localStore[storeKey];
-        if (store.inProduce) {
-          func();
-        } else {
-          store.draft = produce(state, draft => {
-            store.inProduce = true;
-            store.draft = draft;
-            func();
-          });
-          store.inProduce = false;
-          if (shallowEqual(store.value, store.draft)) {
-            store.draft = undefined;
-          }
-        }
-        this.debug.log('[after draft]', storeKey, store.draft);
+        result = func();
       },
       undefined,
       error => {
@@ -182,7 +191,21 @@ export class Odux {
         err && err(error);
       }
     );
-    this.transactionEnd();
+
+    if (result instanceof Promise) {
+      return result
+        .then(data => {
+          finish();
+          return data;
+        })
+        .catch(err => {
+          finish();
+          throw err;
+        });
+    } else {
+      finish();
+      return result;
+    }
   }
 
   public transactionEnd() {

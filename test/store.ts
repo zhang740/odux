@@ -86,3 +86,28 @@ test('props default value.', t => {
   const testStore = new TestStore(defaultOdux);
   t.true(testStore.a_object.num === 999);
 });
+
+test('function return value.', async t => {
+  class AStore extends BaseStore {
+    data = { a: '123' };
+
+    funcA() {
+      return 'a';
+    }
+
+    funcB() {
+      return this.data.a;
+    }
+
+    async funcC() {
+      return 'c';
+    }
+  }
+
+  const odux = new AStore(defaultOdux);
+  t.true(odux.funcA() === 'a');
+  t.true(odux.funcB() === '123');
+  const c = odux.funcC();
+  t.true(c instanceof Promise);
+  t.true((await c) === 'c');
+});

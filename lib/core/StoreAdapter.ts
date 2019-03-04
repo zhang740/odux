@@ -34,7 +34,11 @@ export class StoreAdapter {
   public transactionChange(func: (...args: any[]) => void, err?: (data: Error) => void) {
     const adapter = this;
     return function() {
-      adapter.odux.transactionChange(adapter.storeKey, () => func.apply(this, arguments), err);
+      return adapter.odux.transactionChange(
+        adapter.storeKey,
+        () => func.apply(this, arguments),
+        err
+      );
     };
   }
 
