@@ -16,5 +16,6 @@
     "suppressImplicitAnyIndexErrors": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false
-  }
+  },
+  "exclude": ["./examples"]
 }

@@ -6,7 +6,7 @@ import { guard } from '../utils';
 import { OduxConfig } from './OduxConfig';
 import { BaseStore } from './BaseStore';
 import { Debug } from '../utils';
-import { produce } from 'immer';
+import { produce, setAutoFreeze } from 'immer';
 import { ReduxListener, ReduxChangeEvent } from './ReduxListener';
 import { compare } from '../utils';
 import { shallowEqual } from '../utils';
@@ -77,6 +77,9 @@ export class Odux {
     }
     this.changeDispatch = new ReduxListener(this.eventBus);
     this.eventBus.addListener(ReduxChangeEvent, this.storeChangeListener);
+
+    setAutoFreeze(this.config.devMode);
+
     this.debug.isDebug = this.config.isDebug;
   }
 
@@ -182,7 +185,6 @@ export class Odux {
     this.transactionEnd();
   }
 
-  /** 结束跟踪 */
   public transactionEnd() {
     this.isTracking--;
     this.debug.log('[transactionEnd]', this.isTracking);

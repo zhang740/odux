@@ -85,6 +85,7 @@ export class BaseStore {
     return thisProxy;
   }
 
+  /** 数据变更方法，推荐把业务逻辑封装在 Store 上独立的方法内 */
   changeData(func: () => void) {
     func();
   }

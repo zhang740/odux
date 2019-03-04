@@ -70,6 +70,12 @@ export function connect<OwnPropsType, MapperPropsType>(
         this.ioc = context.iocContext || IocContext.DefaultInstance;
         this.eventBus = this.ioc.get(EventBus);
         this.odux = this.ioc.get(Odux);
+        if (!this.odux) {
+          console.warn(
+            `NOTFOUND odux at iocContext (or default instance of ioc), will auto create one with 'new Odux();' on ioc.`
+          );
+          new Odux({ iocContext: this.ioc });
+        }
         const store = this.odux.getReduxStore();
         this.state = {
           data: propsMapper(store && store.getState(), props, this.ioc),
