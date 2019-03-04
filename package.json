@@ -1,6 +1,6 @@
 {
   "name": "odux",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "observable redux",
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
