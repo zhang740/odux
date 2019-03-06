@@ -1,3 +1,8 @@
+# 0.3.7 / 2019-03-07
+
+- update: integration with dva.
+- deps: update babel.
+
 # 0.3.6 / 2019-03-06
 
 - update: check super class info when connect.
