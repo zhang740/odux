@@ -46,32 +46,26 @@ function combineReducer(odux: Odux, reducer: any) {
 
 export function createOduxEnhancer(config?: OduxConfig) {
   const odux = createOdux(config);
+  if (config.devMode) {
+    (window as any)._$Odux = odux;
+  }
   return (createStore: any) => (reducer: any, preloadedState: any, enhancer: any) => {
     const rootReducer = combineReducer(odux, reducer);
     const store = createStore(rootReducer, preloadedState, enhancer);
-    const dispatch = store.dispatch;
     odux.setReduxStore(store);
-    return {
-      ...store,
-      dispatch,
-    };
+    return store;
   };
 }
 
 export function createOduxForDva(config?: OduxConfig) {
   const odux = createOdux(config);
   return {
-    extraEnhancers: [
-      (createStore: any) => (reducer: any, preloadedState: any, enhancer: any) => {
-        const store = createStore(reducer, preloadedState, enhancer);
-        const dispatch = store.dispatch;
-        odux.setReduxStore(store);
-        return {
-          ...store,
-          dispatch,
-        };
-      },
-    ],
+    odux,
+    extraEnhancers: (createStore: any) => (reducer: any, preloadedState: any, enhancer: any) => {
+      const store = createStore(reducer, preloadedState, enhancer);
+      odux.setReduxStore(store);
+      return store;
+    },
     onReducer: (reducer: any) => {
       return combineReducer(odux, reducer);
     },

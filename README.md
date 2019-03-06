@@ -89,8 +89,11 @@ class App extends PureComponent {
 ### dva
 
 ```ts
+const odux = createOduxForDva();
 const app = dva({
-  extraEnhancers: [createOduxEnhancer()],
+  extraEnhancers: [odux.extraEnhancers],
+  onReducer: odux.onReducer,
+  // onReducer: reducer => otherReducer(odux.onReducer(reducer)),
 });
 ```
 

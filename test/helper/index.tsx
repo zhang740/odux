@@ -1,8 +1,7 @@
 import test from 'ava';
 import * as React from 'react';
 import * as render from 'react-test-renderer';
-import { BaseStore, inject, createOduxAIO, Odux } from '../../lib';
-import { connect } from '../../lib/react-odux';
+import { BaseStore, inject, createOduxAIO, Odux, connect } from '../../lib';
 import { IocContext } from 'power-di';
 import { IocProvider } from 'power-di/react';
 import { getGlobalType } from 'power-di/utils';
@@ -189,6 +188,71 @@ test('type error.', t => {
       return null;
     }
   }
+  t.throws(() => render.create(<TestComponent />));
 
+  class AStore {}
+  @connect()
+  class Test2Component extends React.PureComponent {
+    @inject()
+    aStore: AStore;
+
+    render(): any {
+      return null;
+    }
+  }
+  t.throws(() => render.create(<Test2Component />));
+});
+
+test('class extend.', t => {
+  const odux = createOduxAIO({ dispatchDelay: -1 });
+  IocContext.DefaultInstance.replace(Odux, odux);
+
+  class AStore extends BaseStore {
+    data = { a: 1 };
+  }
+
+  class BaseComponent extends React.PureComponent {
+    @inject()
+    aStore: AStore;
+
+    func() {
+      return this.aStore.data.a;
+    }
+  }
+
+  @connect()
+  class TestComponent extends BaseComponent {
+    render(): any {
+      t.true(this.func() === 1);
+      return null;
+    }
+  }
+  render.create(<TestComponent />);
+});
+
+test('class extend, can\'t connect base class.', t => {
+  const odux = createOduxAIO({ dispatchDelay: -1 });
+  IocContext.DefaultInstance.replace(Odux, odux);
+
+  class AStore extends BaseStore {
+    data = { a: 1 };
+  }
+
+  @connect()
+  class BaseComponent extends React.PureComponent {
+    @inject()
+    aStore: AStore;
+
+    func() {
+      return this.aStore.data.a;
+    }
+  }
+
+  class TestComponent extends BaseComponent {
+    render(): any {
+      t.true(this.func() === 1);
+      return null;
+    }
+  }
   t.throws(() => render.create(<TestComponent />));
 });

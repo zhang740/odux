@@ -240,8 +240,9 @@ export class Odux {
       this.setValue(newState, change.paths, change.newValue);
     });
 
+    this.debug.log('[mainReducer] newState', newState);
     if (this.config.isDebug) {
-      compare(state, newState, '');
+      // compare(state, newState, '');
     }
     return newState;
   }
