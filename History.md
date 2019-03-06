@@ -1,3 +1,7 @@
+# 0.3.6 / 2019-03-06
+
+- update: check super class info when connect.
+
 # 0.3.3 / 2019-03-05
 
 - update: refactor transaction functions.
