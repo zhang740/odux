@@ -67,7 +67,7 @@ export function connect<OwnPropsType, MapperPropsType>(
       constructor(props: OwnPropsType, context: any) {
         super(props, context);
 
-        this.ioc = context.iocContext || IocContext.DefaultInstance;
+        this.ioc = (context && context.iocContext) || IocContext.DefaultInstance;
         this.odux = this.ioc.get(Odux);
         if (!this.odux) {
           console.warn(

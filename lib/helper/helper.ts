@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { IocContext, ClassType } from 'power-di';
-import { getClsTypeByDecorator } from 'power-di/utils';
-import { Odux } from '../core';
+import { getClsTypeByDecorator, getSuperClassInfo } from 'power-di/utils';
+import { Odux, BaseStore } from '../core';
 
 const OduxMetaSymbol = Symbol('OduxMeta');
 export const PropsKeySymbol = '__$odux';
@@ -39,6 +39,12 @@ export function inject<T extends ClassType>(
       config.getter ||
       (ioc => {
         const DataType = getClsTypeByDecorator(config.dataType, target, key);
+
+        if (getSuperClassInfo(DataType).every(t => t.class !== BaseStore)) {
+          throw new Error(
+            `[odux]inject Type is not extend BaseStore: ${DataType} ${target} ${key}`
+          );
+        }
         if (!ioc.has(DataType)) {
           if (ioc.has(Odux)) {
             ioc.register(DataType);

@@ -175,3 +175,20 @@ test('applyChange.', t => {
 
   render.create(<TestComponent />);
 });
+
+test('type error.', t => {
+  const odux = createOduxAIO({ dispatchDelay: -1 });
+  IocContext.DefaultInstance.replace(Odux, odux);
+
+  @connect()
+  class TestComponent extends React.PureComponent {
+    @inject()
+    aStore: number;
+
+    render(): any {
+      return null;
+    }
+  }
+
+  t.throws(() => render.create(<TestComponent />));
+});
