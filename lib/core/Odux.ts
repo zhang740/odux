@@ -156,7 +156,14 @@ export class Odux {
     this.debug.log('[before draft]', storeKey, state);
     const store = this.localStore[storeKey];
 
+    let isFinish = false;
     const finish = () => {
+      if (isFinish) {
+        this.debug.warn('[finish 2rd]');
+        return;
+      }
+      isFinish = true;
+
       if (storeFirstDraft) {
         store.inProduce = false;
         store.draft = finishDraft(store.draft);
