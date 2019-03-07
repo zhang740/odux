@@ -21,7 +21,13 @@ export class FooModel extends BaseStore {
 
 ## 2. 切换 connect
 
-将 `import { connect } from 'odux';` 切换为 `import { connect } from 'odux';`，odux 的 connect 兼容 react-redux/dva 的 connect。（类组件）
+将 `import { connect } from 'odux';` 切换为 `import { connect } from 'odux';`。
+
+odux 的 connect 兼容 react-redux/dva 的 connect。（类组件）
+
+\*同一组件内混合使用注意：
+
+- 目前 connect 传递的 dispatch 不会过 dva 的 promise、saga 中间件，promise dispatch 不可用
 
 ## 3. 添加注入
 

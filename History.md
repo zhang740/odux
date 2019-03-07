@@ -1,3 +1,7 @@
+# 0.3.9 / 2019-03-07
+
+- update: prevent secondary finish.
+
 # 0.3.7 / 2019-03-07
 
 - update: integration with dva.
