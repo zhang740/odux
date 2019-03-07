@@ -144,6 +144,9 @@ export class Odux {
       throw new Error(`No Store Register: [${storeKey}]`);
     }
     const store = this.localStore[storeKey];
+    if (store.inProduce && !store.draft) {
+      store.draft = createDraft(store.value);
+    }
     return store.draft || store.value;
   }
 
@@ -156,16 +159,28 @@ export class Odux {
     this.debug.log('[before draft]', storeKey, state);
     const store = this.localStore[storeKey];
 
+    let isFinish = false;
     const finish = () => {
+      if (isFinish) {
+        this.debug.warn('[finish 2rd]');
+        return;
+      }
+      isFinish = true;
+
+      if (this.isTracking > 0) {
+        this.isTracking--;
+      } else {
+        this.debug.warn('[transactionEnd] tracking already is 0.');
+      }
+
       if (storeFirstDraft) {
         store.inProduce = false;
-        store.draft = finishDraft(store.draft);
+        store.draft = store.draft && finishDraft(store.draft);
         if (shallowEqual(store.value, store.draft)) {
           store.draft = undefined;
         }
       }
       this.debug.log('[after draft]', storeKey, store.draft);
-      this.isTracking--;
       this.debug.log('[transactionEnd]', this.isTracking);
       if (this.isTracking === 0) {
         this.dispatchChange();
@@ -210,18 +225,12 @@ export class Odux {
 
   public applyChange(storeKeys: string[]) {
     storeKeys
-      .filter(k => this.localStore[k].inProduce)
+      .filter(k => this.localStore[k].inProduce && this.localStore[k].draft)
       .forEach(k => {
         const store = this.localStore[k];
         store.draft = finishDraft(store.draft);
       });
     this.dispatchAction(storeKeys);
-    storeKeys
-      .filter(k => this.localStore[k].inProduce)
-      .forEach(k => {
-        const store = this.localStore[k];
-        store.draft = createDraft(store.value);
-      });
   }
 
   public mainReducer(state: any, action: ActionType) {
