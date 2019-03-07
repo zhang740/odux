@@ -147,7 +147,7 @@ export function connect<OwnPropsType, MapperPropsType>(
         const props: any = this.props;
         const store = this[ConnectMetaSymbol].odux.getReduxStore();
         return React.createElement(WrappedComponent, {
-          dispatch: store.dispatch,
+          dispatch: store && store.dispatch,
           ...props,
           ...this.state.data,
         });
