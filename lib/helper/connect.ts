@@ -133,14 +133,13 @@ export function connect<OwnPropsType, MapperPropsType>(
       checkStateChange(props = this.props) {
         const meta = this[ConnectMetaSymbol];
         const store = meta.odux.getReduxStore();
-        const newState = propsMapper(store && store.getState(), this.props, meta.ioc);
+        const newState = propsMapper(store && store.getState(), props, meta.ioc);
         meta.needUpdate = !shallowEqual(this.state.data, newState);
         if (meta.needUpdate) {
           this.setState({
             data: newState,
           });
         }
-        meta.needUpdate = meta.needUpdate || !shallowEqual(this.props, props);
       }
 
       render() {

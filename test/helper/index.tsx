@@ -256,3 +256,42 @@ test('class extend, can\'t connect base class.', t => {
   }
   t.throws(() => render.create(<TestComponent />));
 });
+
+test('props transport.', t => {
+  const odux = createOduxAIO({ dispatchDelay: -1 });
+  IocContext.DefaultInstance.replace(Odux, odux);
+
+  class AStore extends BaseStore {
+    data = { a: 1 };
+  }
+
+  let count = 0;
+  const result = [{ a: 1 }, { a: 2 }];
+
+  class AComponent extends React.PureComponent<any> {
+    render() {
+      t.deepEqual(this.props.data, result.shift());
+      count++;
+      return <div />;
+    }
+  }
+
+  @connect()
+  class BComponent extends React.PureComponent {
+    @inject()
+    aStore: AStore;
+
+    render() {
+      return <AComponent data={this.aStore.data} />;
+    }
+  }
+
+  render.create(<BComponent />);
+
+  const astore = odux.getStore(AStore);
+  astore.changeData(() => {
+    astore.data.a = 2;
+  });
+
+  t.true(count === 2);
+});
