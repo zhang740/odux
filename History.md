@@ -1,3 +1,7 @@
+# 0.3.13 / 2019-03-10
+
+- fix: props is error when checkStateChange.
+
 # 0.3.12 / 2019-03-10
 
 - update: work with combineReducers.
