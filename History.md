@@ -1,3 +1,7 @@
+# 0.3.11 / 2019-03-10
+
+- fix: time of emit store changes.
+
 # 0.3.10 / 2019-03-07
 
 - update: prevent secondary finish.
