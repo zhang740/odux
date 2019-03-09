@@ -1,7 +1,8 @@
 import test from 'ava';
-import { BaseStore, Odux } from '../lib';
+import { BaseStore, Odux, createOduxEnhancer, createOduxForDva } from '../lib';
 import { IocContext } from 'power-di';
-import { createStore, applyMiddleware, compose } from 'redux';
+import { createStore, applyMiddleware, compose, combineReducers } from 'redux';
+import { getGlobalType } from 'power-di/utils';
 
 interface TestObject {
   num?: number;
@@ -12,15 +13,14 @@ class TestStore extends BaseStore {
   test: string;
 }
 
-let defaultOdux: Odux, store: any, testStore: TestStore;
+let defaultOdux: Odux, store: any;
 
 test.beforeEach('init Odux', t => {
   defaultOdux = new Odux({ dispatchDelay: -1, iocContext: new IocContext(), isDebug: false });
-  const finalCreateStore: any = compose(applyMiddleware(...[]))(createStore);
+  const finalCreateStore = compose(applyMiddleware(...[]))(createStore);
   const rootReducer = defaultOdux.mainReducer.bind(defaultOdux);
   store = finalCreateStore(rootReducer);
   defaultOdux.setReduxStore(store);
-  testStore = new TestStore(defaultOdux);
 });
 
 test('no store.', t => {
@@ -29,13 +29,10 @@ test('no store.', t => {
   odux.dispose();
 });
 
-function initStore() {
+test('base.', t => {
+  const testStore = new TestStore(defaultOdux);
   testStore.test = undefined;
   testStore.a_object = {};
-}
-
-test('base.', t => {
-  initStore();
 
   testStore.test = '111222';
   testStore.a_object = { num: 1 };
@@ -121,4 +118,43 @@ test('dispatchDelay.', async t => {
     testStore.a_object.num = 222;
   });
   t.true(testStore.a_object.num === 222);
+});
+
+test.only('auto complete stores to redux.', async t => {
+  const app = createOduxForDva({
+    dispatchDelay: -1,
+    iocContext: new IocContext(),
+    isDebug: false,
+  });
+  const finalCreateStore = compose(app.extraEnhancers)(createStore);
+  const rootReducer = app.onReducer(
+    combineReducers({
+      node: (s: any, a: any) => {
+        if (s) {
+          s = { ...s };
+          s.i++;
+        }
+        return s || { i: 0 };
+      },
+    })
+  );
+  const store = finalCreateStore(rootReducer);
+  app.odux.setReduxStore(store);
+
+  class AStore extends BaseStore {
+    test = 123;
+  }
+
+  const aStore = new AStore(app.odux);
+  t.true(aStore.test === 123);
+  t.deepEqual(app.odux.getReduxStore().getState(), {
+    node: { i: 1 },
+    [getGlobalType(AStore)]: { test: 123 },
+  });
+
+  app.odux.getReduxStore().dispatch({ type: 'TEST' });
+  t.deepEqual(app.odux.getReduxStore().getState(), {
+    node: { i: 2 },
+    [getGlobalType(AStore)]: { test: 123 },
+  });
 });

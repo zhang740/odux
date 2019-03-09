@@ -61,7 +61,7 @@ export function createOduxForDva(config?: OduxConfig) {
   const odux = createOdux(config);
   return {
     odux,
-    extraEnhancers: (createStore: any) => (reducer: any, preloadedState: any, enhancer: any) => {
+    extraEnhancers: (createStore: any) => (reducer: any, preloadedState?: any, enhancer?: any) => {
       const store = createStore(reducer, preloadedState, enhancer);
       odux.setReduxStore(store);
       return store;

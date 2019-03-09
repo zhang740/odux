@@ -235,15 +235,18 @@ export class Odux {
 
   public mainReducer(state: any, action: ActionType) {
     const newState = { ...(state || {}) };
-    if (!state) {
-      Object.keys(this.localStore).forEach(key => {
-        const store = this.localStore[key];
+
+    Object.keys(this.localStore).forEach(key => {
+      const store = this.localStore[key];
+      if (store.paths.reduce((s, k) => s && s[k], newState) === undefined) {
         this.setValue(newState, store.paths, store.value);
-      });
-    }
+      }
+    });
+
     if (action.type !== Odux.REDUX_ACTION_TYPE) {
       return newState;
     }
+
     this.debug.log('[mainReducer]', action);
     action.data.forEach(change => {
       this.setValue(newState, change.paths, change.newValue);
