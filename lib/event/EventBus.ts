@@ -22,7 +22,7 @@ export class EventBus {
     storeKeys?: string[];
   }[] = [];
 
-  public setComponentListener(
+  public setStoreListener(
     cId: string,
     listener?: (evt: StoreChangeEvent) => void,
     storeKeys?: string[]
@@ -45,7 +45,7 @@ export class EventBus {
     return cId;
   }
 
-  public emitComponentEvent(evt: StoreChangeEvent) {
+  public emitStoreChangeEvent(evt: StoreChangeEvent) {
     const storeKeys = evt.data.map(e => e.storeKey).filter(s => s);
     const components = storeKeys.length
       ? this.componentListeners.filter(

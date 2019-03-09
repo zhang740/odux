@@ -291,8 +291,9 @@ export class Odux {
           error
         );
       }
-      this.eventBus.emitComponentEvent(new StoreChangeEvent(changedStore));
     });
+
+    this.eventBus.emitStoreChangeEvent(new StoreChangeEvent(changedStore));
   }
 
   private dispatchChange() {
@@ -339,7 +340,7 @@ export class Odux {
         changes.forEach(change => {
           this.localStore[change.storeKey].value = change.newValue;
         });
-        this.eventBus.emitComponentEvent(
+        this.eventBus.emitStoreChangeEvent(
           new StoreChangeEvent(
             changes.map(change => {
               return {

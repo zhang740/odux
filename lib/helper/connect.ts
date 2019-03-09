@@ -107,7 +107,7 @@ export function connect<OwnPropsType, MapperPropsType>(
       }
 
       componentDidMount() {
-        this[ConnectMetaSymbol].cId = this[ConnectMetaSymbol].eventBus.setComponentListener(
+        this[ConnectMetaSymbol].cId = this[ConnectMetaSymbol].eventBus.setStoreListener(
           undefined,
           this[ConnectMetaSymbol].onStoreChange,
           storeKeys
@@ -115,7 +115,7 @@ export function connect<OwnPropsType, MapperPropsType>(
       }
 
       componentWillUnmount() {
-        this[ConnectMetaSymbol].eventBus.setComponentListener(this[ConnectMetaSymbol].cId);
+        this[ConnectMetaSymbol].eventBus.setStoreListener(this[ConnectMetaSymbol].cId);
       }
 
       componentWillReceiveProps(nextProps: Readonly<OwnPropsType>, nextContext: any) {
