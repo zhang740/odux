@@ -1,3 +1,7 @@
+# 0.3.12 / 2019-03-10
+
+- update: work with combineReducers.
+
 # 0.3.11 / 2019-03-10
 
 - fix: time of emit store changes.
